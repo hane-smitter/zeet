@@ -1,0 +1,19 @@
+{
+  "name": "mygit",
+  "version": "1.0.0",
+  "description": "Minimalist Git CLI",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hane-smitter/mygit.git"
+  },
+  "author": "hane-smitter",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hane-smitter/mygit/issues"
+  },
+  "homepage": "https://github.com/hane-smitter/mygit#readme"
+}
