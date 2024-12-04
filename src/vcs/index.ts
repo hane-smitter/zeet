@@ -23,7 +23,9 @@ yargs(hideBin(process.argv))
           dirExists = false;
         }
         if (dirExists) {
-          console.log("Reinitializing mygit!");
+          console.log(
+            `Reinitialized existing MyGit repository in ${dirLocation}`
+          );
           return;
         }
 
@@ -33,12 +35,9 @@ yargs(hideBin(process.argv))
         const workingFilePath = path.resolve(dirLocation, "working");
         fs.writeFileSync(workingFilePath, "");
 
-        console.log("Initialized mygit");
+        console.log("Initialized MyGit repository");
       } catch (error) {
-        console.error(
-          "Error creating .mygit directory or working file:",
-          error
-        );
+        console.error("Error initializing .mygit directory: ", error);
       }
     }
   )
