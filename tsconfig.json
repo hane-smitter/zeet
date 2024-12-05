@@ -5,7 +5,7 @@
     "target": "ES2023",
     "moduleResolution": "node10",
     "outDir": "dist",
-    "lib": ["ES2023"]
+    "lib": ["ES2022", "ES2023"]
   },
   "include": ["src/**/*"]
 }
