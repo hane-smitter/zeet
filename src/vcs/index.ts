@@ -2,7 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import yargs from "yargs";
+import yargs, { type ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
 
 const packageJson = JSON.parse(
@@ -10,8 +10,30 @@ const packageJson = JSON.parse(
 );
 const MYGIT_DIRNAME = ".mygit";
 const MYGIT_STAGING = "STAGING";
+const MYGIT_REPO = "REPO";
+
+function confirmRepo(argv: ArgumentsCamelCase) {
+  const dirExists = fs.existsSync(path.resolve(MYGIT_DIRNAME));
+  const STAGINGExists = fs.existsSync(
+    path.resolve(MYGIT_DIRNAME, MYGIT_STAGING)
+  );
+  const REPOExists = fs.existsSync(path.resolve(MYGIT_DIRNAME, MYGIT_REPO));
+
+  const skippedCommands = ["init"];
+
+  // Check if the current command is in the list of skipped commands
+  if (skippedCommands.includes(String(argv._[0]))) {
+    return;
+  }
+
+  if (!dirExists || !STAGINGExists || !REPOExists) {
+    console.error("IKO SHIDA! Not a MyGit repository");
+    process.exit(1);
+  }
+}
 
 yargs(hideBin(process.argv))
+  .middleware(confirmRepo)
   .command("* ", false, {}, (argv) => {
     console.log(
       `
@@ -48,6 +70,9 @@ yargs(hideBin(process.argv))
         // Create working file inside .mygit directory
         const workingFilePath = path.resolve(dirLocation, MYGIT_STAGING);
         fs.writeFileSync(workingFilePath, "");
+        // Create REPO dir
+        const repoPath = path.resolve(dirLocation, MYGIT_REPO);
+        fs.mkdirSync(repoPath);
 
         console.log("Initialized MyGit repository");
       } catch (error) {
@@ -77,7 +102,10 @@ yargs(hideBin(process.argv))
             fs.readFileSync(file);
             existentFile = { path: file, exists: true };
           } catch (error) {
-            existentFile = { path: file, exists: false };
+            existentFile = {
+              path: file !== "" ? file : "<empty>",
+              exists: false,
+            };
           }
 
           return existentFile;
@@ -116,6 +144,88 @@ yargs(hideBin(process.argv))
           console.log("Error updating staging index:", error);
         }
       }
+    }
+  )
+  .command(
+    "commit",
+    "Commit files",
+    (yargs) => {
+      return yargs
+        .option("message", {
+          alias: "m",
+          type: "string",
+          description: "Add message to commit",
+          demandOption:
+            "Missing required commit message. Set using --message or -m",
+        })
+        .check((argv) => {
+          if (typeof argv.message !== "string" || argv.message.trim() === "") {
+            throw new Error("--message(or -m) must be a non-empty string.");
+          }
+          return true;
+        });
+    },
+    (argv) => {
+      const { message } = argv;
+
+      // Read all paths in `.mygit/STAGING`
+      try {
+        const stagedPaths = fs.readFileSync(
+          path.resolve(MYGIT_DIRNAME, MYGIT_STAGING),
+          "utf8"
+        );
+        const dedupedPaths = [...new Set(stagedPaths.split("\n"))].filter(
+          (path) => path !== ""
+        );
+        if (!dedupedPaths.length) {
+          console.log(
+            "Nothing to commit.\nAdd files that will be committed. See 'mygit add --help'"
+          );
+          return;
+        }
+
+        const versionedDirName =
+          Math.trunc(Math.random() * 1000000)
+            .toString(32)
+            .toUpperCase() +
+          "_" +
+          Date.now().toString();
+
+        const repoBase = path.resolve(MYGIT_DIRNAME, MYGIT_REPO);
+        const versionedBase = path.join(repoBase, versionedDirName);
+        fs.mkdirSync(versionedBase);
+
+        for (let i = 0; i < dedupedPaths.length; i++) {
+          const filePath = dedupedPaths[i];
+          const dirPath = path.dirname(filePath);
+
+          const filePathContents = fs.readFileSync(filePath, "utf8");
+          if (dirPath) {
+            fs.mkdirSync(path.join(versionedBase, dirPath), {
+              recursive: true,
+            });
+
+            fs.writeFileSync(
+              path.join(versionedBase, filePath),
+              filePathContents
+            );
+          } else {
+            fs.writeFileSync(
+              path.join(versionedBase, filePath),
+              filePathContents
+            );
+          }
+
+          // fs.writeFileSync
+        }
+
+        // console.log("stagedPaths: ", stagedPaths);
+        console.log("stagedPaths SPLIT: ", stagedPaths.split("\n"));
+        console.log({ dedupedPaths });
+      } catch (error) {
+        console.error("Error occured while doing commit:", error);
+      }
+      // Copy all these paths to `repository` as per versioned directory
     }
   )
   .demandCommand(1, "You must provide a valid command")
