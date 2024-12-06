@@ -4,13 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import yargs, { type ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
+import { MYGIT_DIRNAME, MYGIT_REPO, MYGIT_STAGING } from "./constants";
+import { getFilePathsUnderDir, isModifiedFile, shouldStageFile } from "./utils";
 
 const packageJson = JSON.parse(
   fs.readFileSync(path.resolve("package.json")).toString()
 );
-const MYGIT_DIRNAME = ".mygit";
-const MYGIT_STAGING = "STAGING";
-const MYGIT_REPO = "REPO";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const dirExists = fs.existsSync(path.resolve(MYGIT_DIRNAME));
@@ -88,18 +87,45 @@ yargs(hideBin(process.argv))
         describe: "file(s) to add to the staging area",
       });
     },
-    (argv) => {
+    async (argv) => {
       const files = argv.files;
 
       if (Array.isArray(files)) {
-        const stgFiles = [...files] as string[];
+        if (files.length < 1) {
+          console.error(
+            "No file(s) specified. Use '.' to specify the current directory."
+          );
+          return;
+        }
+
+        let stgFiles = [];
+        // If is a dot(`.`), add current directory to staging(modified and untracked files only)
+        if (files.includes(".")) {
+          const allFilePaths = await getFilePathsUnderDir(); // Will ignores patterns in `.mygitignore` or `.gitignore`
+
+          const indexableFilePaths = (
+            await Promise.all(
+              allFilePaths.map(async (filePath) => {
+                const shouldStage = await shouldStageFile(filePath);
+
+                return shouldStage ? filePath : null;
+              })
+            )
+          ).filter(Boolean);
+
+          stgFiles = [...indexableFilePaths];
+        } else {
+          stgFiles = [...files] as string[];
+        }
+
         // if (argv.verbose) {}
 
         // Look up specified files on the disk
         const fileExistenceInfo = stgFiles.map((file) => {
           let existentFile: { path: string; exists: boolean } | null;
           try {
-            fs.readFileSync(file);
+            // Check if file exists
+            fs.accessSync(file, fs.constants.F_OK);
             existentFile = { path: file, exists: true };
           } catch (error) {
             existentFile = {
@@ -113,16 +139,30 @@ yargs(hideBin(process.argv))
 
         // Write existent files to staging file(inside `.mygit`)
         try {
+          const stgIndexPath = path.resolve(MYGIT_DIRNAME, MYGIT_STAGING);
+          let stgNewContent = "";
           for (let i = 0; i < fileExistenceInfo.length; i++) {
             const item = fileExistenceInfo[i];
             if (!item.exists) continue;
 
-            // Write existent file paths to staging file(inside `.mygit`)
-            fs.appendFileSync(
-              path.resolve(MYGIT_DIRNAME, MYGIT_STAGING),
-              item.path + "\n"
-            );
+            // Record paths of existent files to be moved to staging index
+            stgNewContent = stgNewContent + item.path + "\n";
           }
+
+          // Write existent paths to staging index
+          await fs.promises.appendFile(stgIndexPath, stgNewContent, {
+            encoding: "utf-8",
+          });
+
+          // Read file into array
+          const stgContent = await fs.promises.readFile(stgIndexPath, "utf-8");
+          const stgContentArr = stgContent.split(/\r?\n/).filter(Boolean);
+          // Remove dups
+          const stgContentDeduped = [...new Set(stgContentArr)];
+          const cycledStgContent = stgContentDeduped.join("\n") + "\n";
+          await fs.promises.writeFile(stgIndexPath, cycledStgContent, {
+            encoding: "utf-8",
+          });
 
           const skippedPaths = fileExistenceInfo
             .filter((fileInfo) => !fileInfo.exists)
@@ -138,10 +178,10 @@ yargs(hideBin(process.argv))
                 `\nAdded to index\n══════════════${addedPaths.join("")}`
               );
 
-            console.log(`\n\nNot Found\n═════════${skippedPaths.join("")}`);
+            console.error(`\n\nNot Found\n═════════${skippedPaths.join("")}`);
           }
         } catch (error) {
-          console.log("Error updating staging index:", error);
+          console.error("Error updating staging index:", error);
         }
       }
     }
@@ -172,7 +212,7 @@ yargs(hideBin(process.argv))
       try {
         const stagedPaths = fs.readFileSync(
           path.resolve(MYGIT_DIRNAME, MYGIT_STAGING),
-          "utf8"
+          "utf-8"
         );
         const dedupedPaths = [...new Set(stagedPaths.split("\n"))].filter(
           (path) => path !== ""
@@ -207,7 +247,7 @@ yargs(hideBin(process.argv))
           const filePath = dedupedPaths[i];
           const dirPath = path.dirname(filePath);
 
-          const filePathContents = fs.readFileSync(filePath, "utf8");
+          const filePathContents = fs.readFileSync(filePath, "utf-8");
           if (dirPath) {
             fs.mkdirSync(path.join(versionedBase, dirPath), {
               recursive: true,
