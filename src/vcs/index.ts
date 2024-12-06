@@ -168,7 +168,7 @@ yargs(hideBin(process.argv))
     (argv) => {
       const { message } = argv;
 
-      // Read all paths in `.mygit/STAGING`
+      // Read all paths in `.mygit/STAGING`(staged files)
       try {
         const stagedPaths = fs.readFileSync(
           path.resolve(MYGIT_DIRNAME, MYGIT_STAGING),
@@ -184,16 +184,24 @@ yargs(hideBin(process.argv))
           return;
         }
 
+        // Generate snapshop directory name
         const versionedDirName =
           Math.trunc(Math.random() * 1000000)
             .toString(32)
             .toUpperCase() +
           "_" +
           Date.now().toString();
-
         const repoBase = path.resolve(MYGIT_DIRNAME, MYGIT_REPO);
-        const versionedBase = path.join(repoBase, versionedDirName);
-        fs.mkdirSync(versionedBase);
+        const versionedBase = path.join(repoBase, versionedDirName, "store"); // // Location for version snapshot
+        const mygitMsgBase = path.join(repoBase, versionedDirName, "meta"); // Location for message
+
+        // Make Version tracking directory
+        fs.mkdirSync(versionedBase, { recursive: true });
+        // Make version message directory
+        fs.mkdirSync(mygitMsgBase); // not specifying `recursive`
+
+        // Save version message
+        fs.writeFileSync(path.join(mygitMsgBase, "MYGITMSG"), message);
 
         for (let i = 0; i < dedupedPaths.length; i++) {
           const filePath = dedupedPaths[i];
@@ -215,13 +223,13 @@ yargs(hideBin(process.argv))
               filePathContents
             );
           }
-
-          // fs.writeFileSync
         }
 
-        // console.log("stagedPaths: ", stagedPaths);
-        console.log("stagedPaths SPLIT: ", stagedPaths.split("\n"));
-        console.log({ dedupedPaths });
+        // After commit, reset the staging index
+        fs.writeFileSync(path.resolve(MYGIT_DIRNAME, MYGIT_STAGING), "");
+
+        // console.log("stagedPaths SPLIT: ", stagedPaths.split("\n"));
+        // console.log({ dedupedPaths });
       } catch (error) {
         console.error("Error occured while doing commit:", error);
       }
