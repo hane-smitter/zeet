@@ -1,24 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { MYGIT_DIRNAME, MYGIT_REPO } from "../constants";
-import { getVersionDir } from "./getVersionDir";
+import { workDirVersionInrepo } from "./workDirVersionInRepo";
+import resolveRoot from "./resolveRoot";
 
 export async function isUntrackedFile(filePath: string) {
-  await fs.promises.access(filePath, fs.constants.F_OK); // Will throw if it does not exist
+  const myGitParentDir = resolveRoot.find();
+  // Check `filePath` exists in wd
+  await fs.promises.access(
+    path.resolve(myGitParentDir, filePath),
+    fs.constants.F_OK
+  );
 
-  const repoDir = path.resolve(MYGIT_DIRNAME, MYGIT_REPO);
-  const latestVersionDir = await getVersionDir(repoDir, "LATEST"); // Subject to change: Instead read from HEAD that will point to version in current view
-  if (!latestVersionDir) return true;
+  const selectedVersionDir = await workDirVersionInrepo();
+  // Can be empty string meaning no snapshot of working dir is found
+  if (!selectedVersionDir) return true;
 
-  // console.log("latestVersionDir from UntrackedFile: ", latestVersionDir);
+  // console.log("selectedVersionDir from UntrackedFile: ", selectedVersionDir);
 
-  const relativeFilePath = path.relative(process.cwd(), filePath);
+  const relativeFilePath = path.relative(myGitParentDir, filePath);
   // console.group("Untracked file");
   // console.log({
   //   WDFilePath: filePath,
   //   "RelativeWD:relativeFilePath": relativeFilePath,
-  //   VCSDirFilePath: path.resolve(latestVersionDir, "store", relativeFilePath),
+  //   VCSDirFilePath: path.resolve(selectedVersionDir, "store", relativeFilePath),
   // });
   // console.groupEnd();
 
@@ -33,7 +38,7 @@ export async function isUntrackedFile(filePath: string) {
   let fileExistsInRepo: boolean | undefined;
   try {
     await fs.promises.access(
-      path.resolve(latestVersionDir, "store", relativeFilePath),
+      path.resolve(selectedVersionDir, "store", relativeFilePath),
       fs.constants.F_OK
     );
     fileExistsInRepo = true;
@@ -44,7 +49,7 @@ export async function isUntrackedFile(filePath: string) {
   // console.log(
   //   "Is untracked file: %s, filepath: %s",
   //   !fileExistsInRepo,
-  //   path.resolve(latestVersionDir, "store", relativeFilePath)
+  //   path.resolve(selectedVersionDir, "store", relativeFilePath)
   // );
 
   // If file exists in working directory and NOT in repo, then it `untracked`

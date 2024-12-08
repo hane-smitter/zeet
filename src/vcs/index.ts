@@ -4,19 +4,30 @@ import fs from "node:fs";
 import path from "node:path";
 import yargs, { type ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
-import { MYGIT_DIRNAME, MYGIT_REPO, MYGIT_STAGING } from "./constants";
+import {
+  MYGIT_DIRNAME,
+  MYGIT_HEAD,
+  MYGIT_REPO,
+  MYGIT_STAGING,
+} from "./constants";
 import { getFilePathsUnderDir, isModifiedFile, shouldStageFile } from "./utils";
-
-const packageJson = JSON.parse(
-  fs.readFileSync(path.resolve("package.json")).toString()
-);
+import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
+import { copyDir } from "./utils/copyDir";
+import resolveRoot from "./utils/resolveRoot";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
-  const dirExists = fs.existsSync(path.resolve(MYGIT_DIRNAME));
+  const myGitParentDir = resolveRoot.find();
+
+  const dirExists = fs.existsSync(path.resolve(myGitParentDir, MYGIT_DIRNAME));
   const STAGINGExists = fs.existsSync(
-    path.resolve(MYGIT_DIRNAME, MYGIT_STAGING)
+    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING)
   );
-  const REPOExists = fs.existsSync(path.resolve(MYGIT_DIRNAME, MYGIT_REPO));
+  const HEADExists = fs.existsSync(
+    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD)
+  );
+  const REPOExists = fs.existsSync(
+    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO)
+  );
 
   const skippedCommands = ["init"];
 
@@ -25,7 +36,7 @@ function confirmRepo(argv: ArgumentsCamelCase) {
     return;
   }
 
-  if (!dirExists || !STAGINGExists || !REPOExists) {
+  if (!dirExists || !STAGINGExists || !REPOExists || !HEADExists) {
     console.error("IKO SHIDA! Not a MyGit repository");
     process.exit(1);
   }
@@ -38,7 +49,7 @@ yargs(hideBin(process.argv))
       `
 ╔══════════════════════════════════════════════════════╗
 ║  🌟 Welcome! Please specify a valid command.         ║
-║  Run '${packageJson.name} --help' for usage info.    ║
+║  Run 'mygit --help' for usage info.                  ║
 ╚══════════════════════════════════════════════════════╝
   `.trim()
     );
@@ -53,25 +64,28 @@ yargs(hideBin(process.argv))
         // Check if directory already exists
         let dirExists: boolean | undefined;
         try {
-          dirExists = Boolean(fs.readdirSync(dirLocation));
+          dirExists = fs.existsSync(dirLocation);
         } catch (error) {
           dirExists = false;
         }
         if (dirExists) {
-          console.log(
-            `Reinitialized existing MyGit repository in ${dirLocation}`
+          console.warn(
+            `Already initialized MyGit repository in ${dirLocation}`
           );
           return;
         }
 
-        // Create .mygit directory
+        // Create `.mygit` directory
         fs.mkdirSync(dirLocation, { recursive: true });
-        // Create working file inside .mygit directory
-        const workingFilePath = path.resolve(dirLocation, MYGIT_STAGING);
-        fs.writeFileSync(workingFilePath, "");
         // Create REPO dir
         const repoPath = path.resolve(dirLocation, MYGIT_REPO);
         fs.mkdirSync(repoPath);
+        // Create staging file inside `.mygit` directory
+        const stgFilePath = path.resolve(dirLocation, MYGIT_STAGING);
+        fs.writeFileSync(stgFilePath, "", { encoding: "utf-8" });
+        // Create Head file inside `.mygit` directory
+        const headFilePath = path.resolve(dirLocation, MYGIT_HEAD);
+        fs.writeFileSync(headFilePath, "", { encoding: "utf-8" });
 
         console.log("Initialized MyGit repository");
       } catch (error) {
@@ -88,20 +102,21 @@ yargs(hideBin(process.argv))
       });
     },
     async (argv) => {
+      const myGitParentDir = resolveRoot.find();
       const files = argv.files;
 
       if (Array.isArray(files)) {
         if (files.length < 1) {
           console.error(
-            "No file(s) specified. Use '.' to specify the current directory."
+            "No file(s) specified. Add file path or use '.' to specify the current directory."
           );
-          return;
+          process.exit(1);
         }
 
         let stgFiles = [];
         // If is a dot(`.`), add current directory to staging(modified and untracked files only)
         if (files.includes(".")) {
-          const allFilePaths = await getFilePathsUnderDir(); // Will ignores patterns in `.mygitignore` or `.gitignore`
+          const allFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.mygitignore` or `.gitignore`
 
           const indexableFilePaths = (
             await Promise.all(
@@ -125,7 +140,10 @@ yargs(hideBin(process.argv))
           let existentFile: { path: string; exists: boolean } | null;
           try {
             // Check if file exists
-            fs.accessSync(file, fs.constants.F_OK);
+            fs.accessSync(
+              path.resolve(myGitParentDir, file),
+              fs.constants.F_OK
+            );
             existentFile = { path: file, exists: true };
           } catch (error) {
             existentFile = {
@@ -139,7 +157,11 @@ yargs(hideBin(process.argv))
 
         // Write existent files to staging file(inside `.mygit`)
         try {
-          const stgIndexPath = path.resolve(MYGIT_DIRNAME, MYGIT_STAGING);
+          const stgIndexPath = path.resolve(
+            myGitParentDir,
+            MYGIT_DIRNAME,
+            MYGIT_STAGING
+          );
           let stgNewContent = "";
           for (let i = 0; i < fileExistenceInfo.length; i++) {
             const item = fileExistenceInfo[i];
@@ -196,16 +218,19 @@ yargs(hideBin(process.argv))
           type: "string",
           description: "Add message to commit",
           demandOption:
-            "Missing required commit message. Set using --message or -m",
+            "Commit message is required. Set using --message or -m shorthand",
         })
         .check((argv) => {
           if (typeof argv.message !== "string" || argv.message.trim() === "") {
-            throw new Error("--message(or -m) must be a non-empty string.");
+            console.error(
+              "No message was provided. --message(or -m) must be a non-empty string."
+            );
+            process.exit(1);
           }
           return true;
         });
     },
-    (argv) => {
+    async (argv) => {
       const { message } = argv;
 
       // Read all paths in `.mygit/STAGING`(staged files)
@@ -214,7 +239,7 @@ yargs(hideBin(process.argv))
           path.resolve(MYGIT_DIRNAME, MYGIT_STAGING),
           "utf-8"
         );
-        const dedupedPaths = [...new Set(stagedPaths.split("\n"))].filter(
+        const dedupedPaths = [...new Set(stagedPaths.split(/\r?\n/))].filter(
           (path) => path !== ""
         );
         if (!dedupedPaths.length) {
@@ -224,49 +249,72 @@ yargs(hideBin(process.argv))
           return;
         }
 
-        // Generate snapshop directory name
-        const versionedDirName =
+        // Generate snapshot directory name
+        const new_V_DirName =
           Math.trunc(Math.random() * 1000000)
             .toString(32)
             .toUpperCase() +
           "_" +
           Date.now().toString();
         const repoBase = path.resolve(MYGIT_DIRNAME, MYGIT_REPO);
-        const versionedBase = path.join(repoBase, versionedDirName, "store"); // // Location for version snapshot
-        const mygitMsgBase = path.join(repoBase, versionedDirName, "meta"); // Location for message
+        const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // // Location for version snapshot
+        const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for message
 
         // Make Version tracking directory
-        fs.mkdirSync(versionedBase, { recursive: true });
+        fs.mkdirSync(new_V_Base, { recursive: true });
         // Make version message directory
         fs.mkdirSync(mygitMsgBase); // not specifying `recursive`
 
         // Save version message
-        fs.writeFileSync(path.join(mygitMsgBase, "MYGITMSG"), message);
+        fs.writeFileSync(path.join(mygitMsgBase, "MYGITMSG"), message, {
+          encoding: "utf-8",
+        });
+
+        // Copy a version referenced by `head` before adding new files
+        const copyOverVersionDir = await workDirVersionInrepo();
+        // If prev vers dir DOES NOT EXIST(e.g in init commit): Copy working directory. NOTE: No need for this, because staging will list all paths(if not in VERSION REPO)
+        // Overwrite files in current version dir with file paths from staging
+        console.log({
+          cpSrc: path.resolve(repoBase, copyOverVersionDir, "store"),
+          spDest: new_V_Base,
+        });
+        copyDir(
+          path.resolve(repoBase, copyOverVersionDir, "store"),
+          new_V_Base
+        );
 
         for (let i = 0; i < dedupedPaths.length; i++) {
-          const filePath = dedupedPaths[i];
-          const dirPath = path.dirname(filePath);
+          const wdFilePath = dedupedPaths[i]; // If path is from STAGING, it should be a relative path
+          const dirPath = path.dirname(wdFilePath);
 
-          const filePathContents = fs.readFileSync(filePath, "utf-8");
+          const wdFilePathContents = fs.readFileSync(
+            path.resolve(wdFilePath),
+            "utf-8"
+          );
+
           if (dirPath) {
-            fs.mkdirSync(path.join(versionedBase, dirPath), {
+            // Prepare directory structure if any
+            fs.mkdirSync(path.join(new_V_Base, dirPath), {
               recursive: true,
             });
-
-            fs.writeFileSync(
-              path.join(versionedBase, filePath),
-              filePathContents
-            );
-          } else {
-            fs.writeFileSync(
-              path.join(versionedBase, filePath),
-              filePathContents
-            );
           }
+          // Write file at its `filepath`
+          fs.writeFileSync(
+            path.join(new_V_Base, wdFilePath),
+            wdFilePathContents
+          );
         }
 
         // After commit, reset the staging index
-        fs.writeFileSync(path.resolve(MYGIT_DIRNAME, MYGIT_STAGING), "");
+        fs.writeFileSync(path.resolve(MYGIT_DIRNAME, MYGIT_STAGING), "", {
+          encoding: "utf-8",
+        });
+        // After commit, update the `HEAD`
+        fs.writeFileSync(
+          path.resolve(MYGIT_DIRNAME, MYGIT_HEAD),
+          new_V_DirName,
+          { encoding: "utf-8" }
+        );
 
         // console.log("stagedPaths SPLIT: ", stagedPaths.split("\n"));
         // console.log({ dedupedPaths });

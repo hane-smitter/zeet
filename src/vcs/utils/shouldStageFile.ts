@@ -12,9 +12,6 @@ export async function shouldStageFile(filePath: string) {
       }
     }
   );
-  //   const isModified = await isModifiedFile(filePath);
-
-  console.log("shouldStage: ", shouldStage);
 
   return shouldStage;
 }

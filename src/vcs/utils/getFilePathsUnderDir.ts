@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { glob } from "glob";
 import ignore from "ignore";
+import resolveRoot from "./resolveRoot";
 
 /**
  * Gets file paths under `targetDir` directory. If not specified, it finds file paths under current working directory(`cwd`).
@@ -12,8 +13,9 @@ import ignore from "ignore";
  */
 export async function getFilePathsUnderDir(targetDir: string = "") {
   try {
-    const myGitignorePath = path.resolve(".mygitignore");
-    const gitignorePath = path.resolve(".gitignore");
+    const myGitParentDir = resolveRoot.find();
+    const myGitignorePath = path.resolve(myGitParentDir, ".mygitignore");
+    const gitignorePath = path.resolve(myGitParentDir, ".gitignore");
 
     // Load `.mygitignore` file. If not exist, Load `.gitignore`
     let myGitignorePatterns: string[] = [];
@@ -31,6 +33,7 @@ export async function getFilePathsUnderDir(targetDir: string = "") {
       ? `${targetDir.replace(/(\/)+$/, "")}/**`
       : "**/*";
     const files = await glob(scanDirPattern, {
+      cwd: myGitParentDir,
       nodir: true,
       dot: true,
       ignore: ["node_modules/**", ".git/**", ".mygit/**"],
