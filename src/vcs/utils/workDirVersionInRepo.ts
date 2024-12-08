@@ -6,7 +6,9 @@ import { getVersionDir } from "./getVersionDir";
 import resolveRoot from "./resolveRoot";
 
 /**
- * Selects version from `HEAD` for the current work dir. If nothing, most recent snapshot path is retrieved
+ * Selects version from `HEAD` for the current work dir. If nothing, most recent snapshot path is retrieved.
+ *
+ * Absolute path is returned
  */
 export async function workDirVersionInrepo() {
   const myGitParentDir = resolveRoot.find();
@@ -25,7 +27,7 @@ export async function workDirVersionInrepo() {
   // if `nowVersion` read from `head` is not available, then we get latest version store from `REPO`
   let selectedVersionDir: string | undefined;
   if (nowVersion) {
-    selectedVersionDir = nowVersion;
+    selectedVersionDir = path.resolve(repoDir, nowVersion);
   } else {
     selectedVersionDir = (await getVersionDir(repoDir, "LATEST")) || "";
   }

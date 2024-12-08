@@ -18,7 +18,10 @@ export async function isUntrackedFile(filePath: string) {
 
   // console.log("selectedVersionDir from UntrackedFile: ", selectedVersionDir);
 
-  const relativeFilePath = path.relative(myGitParentDir, filePath);
+  const relativeFilePath = path.relative(
+    myGitParentDir,
+    path.resolve(myGitParentDir, filePath)
+  );
   // console.group("Untracked file");
   // console.log({
   //   WDFilePath: filePath,
@@ -37,6 +40,10 @@ export async function isUntrackedFile(filePath: string) {
 
   let fileExistsInRepo: boolean | undefined;
   try {
+    // console.log(
+    //   "repo pth:: ",
+    //   path.resolve(selectedVersionDir, "store", relativeFilePath)
+    // );
     await fs.promises.access(
       path.resolve(selectedVersionDir, "store", relativeFilePath),
       fs.constants.F_OK

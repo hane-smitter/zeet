@@ -10,7 +10,7 @@ import {
   MYGIT_REPO,
   MYGIT_STAGING,
 } from "./constants";
-import { getFilePathsUnderDir, isModifiedFile, shouldStageFile } from "./utils";
+import { getFilePathsUnderDir, shouldStageFile } from "./utils";
 import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
 import { copyDir } from "./utils/copyDir";
 import resolveRoot from "./utils/resolveRoot";
@@ -98,7 +98,8 @@ yargs(hideBin(process.argv))
     "Add files to staging area",
     (yargs) => {
       return yargs.positional("files", {
-        describe: "file(s) to add to the staging area",
+        describe:
+          "file(s) to add to the staging area. Use '.' to add current directory.",
       });
     },
     async (argv) => {
@@ -176,13 +177,25 @@ yargs(hideBin(process.argv))
             encoding: "utf-8",
           });
 
-          // Read file into array
+          // Read STAGING file into array
           const stgContent = await fs.promises.readFile(stgIndexPath, "utf-8");
           const stgContentArr = stgContent.split(/\r?\n/).filter(Boolean);
-          // Remove dups
-          const stgContentDeduped = [...new Set(stgContentArr)];
-          const cycledStgContent = stgContentDeduped.join("\n") + "\n";
-          await fs.promises.writeFile(stgIndexPath, cycledStgContent, {
+
+          // 1. Remove dups
+          const dedupedStgContent = [...new Set(stgContentArr)];
+          // 2. Confirm the files paths are indexable
+          // Solves case where a file is 'untracked/modified' in previous `mygit add ...`, and now it is undone
+          const confirmIndexables = (
+            await Promise.all(
+              dedupedStgContent.map(async function (filePath) {
+                const isIndexable = await shouldStageFile(filePath);
+                return isIndexable ? filePath : null;
+              })
+            )
+          ).filter(Boolean);
+
+          const prunedStgContent = confirmIndexables.join("\n") + "\n";
+          await fs.promises.writeFile(stgIndexPath, prunedStgContent, {
             encoding: "utf-8",
           });
 
@@ -231,16 +244,17 @@ yargs(hideBin(process.argv))
         });
     },
     async (argv) => {
+      const myGitParentDir = resolveRoot.find();
       const { message } = argv;
 
       // Read all paths in `.mygit/STAGING`(staged files)
       try {
         const stagedPaths = fs.readFileSync(
-          path.resolve(MYGIT_DIRNAME, MYGIT_STAGING),
+          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
           "utf-8"
         );
         const dedupedPaths = [...new Set(stagedPaths.split(/\r?\n/))].filter(
-          (path) => path !== ""
+          Boolean
         );
         if (!dedupedPaths.length) {
           console.log(
@@ -256,13 +270,17 @@ yargs(hideBin(process.argv))
             .toUpperCase() +
           "_" +
           Date.now().toString();
-        const repoBase = path.resolve(MYGIT_DIRNAME, MYGIT_REPO);
+        const repoBase = path.resolve(
+          myGitParentDir,
+          MYGIT_DIRNAME,
+          MYGIT_REPO
+        );
         const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // // Location for version snapshot
-        const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for message
+        const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message
 
         // Make Version tracking directory
         fs.mkdirSync(new_V_Base, { recursive: true });
-        // Make version message directory
+        // Make version meta directory
         fs.mkdirSync(mygitMsgBase); // not specifying `recursive`
 
         // Save version message
@@ -283,17 +301,18 @@ yargs(hideBin(process.argv))
           new_V_Base
         );
 
+        // Overwrite copied over version with changes from work dir
         for (let i = 0; i < dedupedPaths.length; i++) {
-          const wdFilePath = dedupedPaths[i]; // If path is from STAGING, it should be a relative path
-          const dirPath = path.dirname(wdFilePath);
+          const wdFilePath = dedupedPaths[i];
+          const dirPath = path.dirname(wdFilePath); // If `wdFilePath` is from STAGING, it should be a relative path
 
           const wdFilePathContents = fs.readFileSync(
-            path.resolve(wdFilePath),
+            path.resolve(myGitParentDir, wdFilePath),
             "utf-8"
           );
 
           if (dirPath) {
-            // Prepare directory structure if any
+            // Create `dirPath` replica directory structure
             fs.mkdirSync(path.join(new_V_Base, dirPath), {
               recursive: true,
             });
@@ -306,12 +325,16 @@ yargs(hideBin(process.argv))
         }
 
         // After commit, reset the staging index
-        fs.writeFileSync(path.resolve(MYGIT_DIRNAME, MYGIT_STAGING), "", {
-          encoding: "utf-8",
-        });
+        fs.writeFileSync(
+          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+          "",
+          {
+            encoding: "utf-8",
+          }
+        );
         // After commit, update the `HEAD`
         fs.writeFileSync(
-          path.resolve(MYGIT_DIRNAME, MYGIT_HEAD),
+          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
           new_V_DirName,
           { encoding: "utf-8" }
         );

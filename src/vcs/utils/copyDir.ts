@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 export function copyDir(src: string, dest: string): void {
+  if (src === dest) return;
   if (!fs.existsSync(dest)) {
     fs.mkdirSync(dest, { recursive: true });
   }
