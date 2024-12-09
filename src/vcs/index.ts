@@ -5,10 +5,14 @@ import path from "node:path";
 import yargs, { type ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
 import {
+  MYGIT_BRANCH,
+  MYGIT_DEFAULT_BRANCH_NAME,
+  MYGIT_BRANCH_ACTIVITY,
   MYGIT_DIRNAME,
   MYGIT_HEAD,
   MYGIT_REPO,
   MYGIT_STAGING,
+  MYGIT_ACTIVE_BRANCH,
 } from "./constants";
 import { getFilePathsUnderDir, shouldStageFile } from "./utils";
 import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
@@ -28,6 +32,9 @@ function confirmRepo(argv: ArgumentsCamelCase) {
   const REPOExists = fs.existsSync(
     path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO)
   );
+  const BRANCHExists = fs.existsSync(
+    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH)
+  );
 
   const skippedCommands = ["init"];
 
@@ -36,7 +43,13 @@ function confirmRepo(argv: ArgumentsCamelCase) {
     return;
   }
 
-  if (!dirExists || !STAGINGExists || !REPOExists || !HEADExists) {
+  if (
+    !dirExists ||
+    !STAGINGExists ||
+    !REPOExists ||
+    !HEADExists ||
+    !BRANCHExists
+  ) {
     console.error("IKO SHIDA! Not a MyGit repository");
     process.exit(1);
   }
@@ -58,34 +71,59 @@ yargs(hideBin(process.argv))
     "init",
     "Initialize mygit repository",
     (yargs) => {},
-    (argv) => {
-      const dirLocation = path.resolve(MYGIT_DIRNAME);
+    async (argv) => {
+      const myGitDirPath = path.resolve(MYGIT_DIRNAME);
       try {
         // Check if directory already exists
-        let dirExists: boolean | undefined;
-        try {
-          dirExists = fs.existsSync(dirLocation);
-        } catch (error) {
-          dirExists = false;
-        }
+        let dirExists: boolean = fs.existsSync(myGitDirPath);
         if (dirExists) {
           console.warn(
-            `Already initialized MyGit repository in ${dirLocation}`
+            `Already initialized MyGit repository in ${myGitDirPath}`
           );
-          return;
+          process.exit(1);
         }
 
-        // Create `.mygit` directory
-        fs.mkdirSync(dirLocation, { recursive: true });
-        // Create REPO dir
-        const repoPath = path.resolve(dirLocation, MYGIT_REPO);
+        // 1. Create `.mygit` directory
+        fs.mkdirSync(myGitDirPath, { recursive: true });
+        // 2. Create REPO dir
+        const repoPath = path.resolve(myGitDirPath, MYGIT_REPO);
         fs.mkdirSync(repoPath);
-        // Create staging file inside `.mygit` directory
-        const stgFilePath = path.resolve(dirLocation, MYGIT_STAGING);
-        fs.writeFileSync(stgFilePath, "", { encoding: "utf-8" });
-        // Create Head file inside `.mygit` directory
-        const headFilePath = path.resolve(dirLocation, MYGIT_HEAD);
-        fs.writeFileSync(headFilePath, "", { encoding: "utf-8" });
+        // 3.  Create BRANCH dir & Create Default BRANCH dir
+        const defBranchPath = path.resolve(
+          myGitDirPath,
+          MYGIT_BRANCH,
+          MYGIT_DEFAULT_BRANCH_NAME
+        );
+        fs.mkdirSync(defBranchPath, { recursive: true });
+        // 4. Create ACTIVITY file that will include a branch's POINTERs
+        const branchActivityFile = path.resolve(
+          defBranchPath,
+          MYGIT_BRANCH_ACTIVITY
+        );
+        fs.writeFileSync(branchActivityFile, "", {
+          encoding: "utf-8",
+        });
+        // 5. Create ACTIVE file to track active branch. Default content is written to `MYGIT_DEFAULT_BRANCH_NAME`
+        // Meaning it will be the default active branch
+        const activeBranchFile = path.resolve(
+          myGitDirPath,
+          MYGIT_BRANCH,
+          MYGIT_ACTIVE_BRANCH
+        );
+        fs.writeFileSync(activeBranchFile, MYGIT_DEFAULT_BRANCH_NAME, {
+          encoding: "utf-8",
+        });
+        // 6. Create staging file inside `.mygit` directory
+        const stgFile = path.resolve(myGitDirPath, MYGIT_STAGING);
+        fs.writeFileSync(stgFile, "", { encoding: "utf-8" });
+        // 7. Create Head file inside `.mygit` directory
+        const headFile = path.resolve(myGitDirPath, MYGIT_HEAD);
+        fs.writeFileSync(headFile, "", { encoding: "utf-8" });
+
+        // await Promise.all(initializationArr);
+        // for (const asyncInit of asyncInitArr) {
+        //   await asyncInit;
+        // }
 
         console.log("Initialized MyGit repository");
       } catch (error) {
@@ -185,7 +223,7 @@ yargs(hideBin(process.argv))
           const dedupedStgContent = [...new Set(stgContentArr)];
           // 2. Confirm the files paths are indexable
           // Solves case where a file is 'untracked/modified' in previous `mygit add ...`, and now it is undone
-          const confirmIndexables = (
+          const confirmedIndexables = (
             await Promise.all(
               dedupedStgContent.map(async function (filePath) {
                 const isIndexable = await shouldStageFile(filePath);
@@ -194,7 +232,7 @@ yargs(hideBin(process.argv))
             )
           ).filter(Boolean);
 
-          const prunedStgContent = confirmIndexables.join("\n") + "\n";
+          const prunedStgContent = confirmedIndexables.join("\n") + "\n";
           await fs.promises.writeFile(stgIndexPath, prunedStgContent, {
             encoding: "utf-8",
           });
@@ -205,15 +243,15 @@ yargs(hideBin(process.argv))
 
           if (skippedPaths.length) {
             // Tell about added paths only when we have skipped files
-            const addedPaths = fileExistenceInfo
-              .filter((fileInfo) => fileInfo.exists)
-              .map((fileInfo) => "\n" + fileInfo.path);
+            const addedPaths = confirmedIndexables.map(
+              (filePath) => "\n" + filePath
+            );
             addedPaths.length &&
               console.log(
                 `\nAdded to index\n══════════════${addedPaths.join("")}`
               );
 
-            console.error(`\n\nNot Found\n═════════${skippedPaths.join("")}`);
+            console.error(`\nNot Found\n═════════${skippedPaths.join("")}`);
           }
         } catch (error) {
           console.error("Error updating staging index:", error);
@@ -260,7 +298,7 @@ yargs(hideBin(process.argv))
           console.log(
             "Nothing to commit.\nAdd files that will be committed. See 'mygit add --help'"
           );
-          return;
+          process.exit(1);
         }
 
         // Generate snapshot directory name
@@ -292,10 +330,6 @@ yargs(hideBin(process.argv))
         const copyOverVersionDir = await workDirVersionInrepo();
         // If prev vers dir DOES NOT EXIST(e.g in init commit): Copy working directory. NOTE: No need for this, because staging will list all paths(if not in VERSION REPO)
         // Overwrite files in current version dir with file paths from staging
-        console.log({
-          cpSrc: path.resolve(repoBase, copyOverVersionDir, "store"),
-          spDest: new_V_Base,
-        });
         copyDir(
           path.resolve(repoBase, copyOverVersionDir, "store"),
           new_V_Base
@@ -324,7 +358,7 @@ yargs(hideBin(process.argv))
           );
         }
 
-        // After commit, reset the staging index
+        // After versioning, reset the staging index
         fs.writeFileSync(
           path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
           "",
@@ -332,11 +366,46 @@ yargs(hideBin(process.argv))
             encoding: "utf-8",
           }
         );
-        // After commit, update the `HEAD`
+        // After versioning, update the `HEAD`
+        const currentActiveBranch = fs
+          .readFileSync(
+            path.resolve(
+              myGitParentDir,
+              MYGIT_DIRNAME,
+              MYGIT_BRANCH,
+              MYGIT_ACTIVE_BRANCH
+            ),
+            "utf-8"
+          )
+          .split(/\r?\n/)[0];
+        const updatedHead = currentActiveBranch + "@" + new_V_DirName;
         fs.writeFileSync(
           path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
-          new_V_DirName,
+          updatedHead,
           { encoding: "utf-8" }
+        );
+        // After versioning, update a branch's `ACTIVITY` with the `new_V_DirName`
+        // Reading file belonging to a branch that stores pointers
+        const existingPointers = fs.readFileSync(
+          path.resolve(
+            myGitParentDir,
+            MYGIT_DIRNAME,
+            MYGIT_BRANCH,
+            currentActiveBranch,
+            MYGIT_BRANCH_ACTIVITY
+          ),
+          "utf-8"
+        );
+        const updatedPointers = new_V_DirName + "\n" + existingPointers;
+        fs.writeFileSync(
+          path.resolve(
+            myGitParentDir,
+            MYGIT_DIRNAME,
+            MYGIT_BRANCH,
+            currentActiveBranch,
+            MYGIT_BRANCH_ACTIVITY
+          ),
+          updatedPointers
         );
 
         // console.log("stagedPaths SPLIT: ", stagedPaths.split("\n"));
@@ -345,6 +414,43 @@ yargs(hideBin(process.argv))
         console.error("Error occured while doing commit:", error);
       }
       // Copy all these paths to `repository` as per versioned directory
+    }
+  )
+  .command(
+    "branch [branchName]",
+    "List, create, or delete branches",
+    (yargs) => {
+      return yargs
+        .positional("branchName", { describe: "Name of branch to create" })
+        .check((argv) => {
+          if (
+            typeof argv.branchName !== "string" ||
+            argv.branchName.trim() === ""
+          ) {
+            console.error(
+              "A non-empty string is required for the branch name."
+            );
+            process.exit(1);
+          }
+          return true;
+        })
+        .check((argv) => {
+          if (
+            typeof argv.branchName === "string" &&
+            !/^[a-zA-Z0-9][-a-zA-Z0-9]*(\/[a-zA-Z0-9][-a-zA-Z0-9]*)?$/.test(
+              argv.branchName
+            )
+          ) {
+            console.error("Invalid branch name");
+            process.exit(1);
+          }
+          return true;
+        });
+    },
+    (argv) => {
+      const { branchName } = argv;
+
+      // Make new Dir in `mygit` tawi
     }
   )
   .demandCommand(1, "You must provide a valid command")
