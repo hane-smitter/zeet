@@ -2,7 +2,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import yargs, { type ArgumentsCamelCase } from "yargs";
+import yargs, {
+  showHelp,
+  showHelpOnFail,
+  type ArgumentsCamelCase,
+} from "yargs";
 import { hideBin } from "yargs/helpers";
 import {
   MYGIT_BRANCH,
@@ -421,42 +425,157 @@ yargs(hideBin(process.argv))
     "List, create, or delete branches",
     (yargs) => {
       return yargs
-        .positional("branchName", { describe: "Name of branch to create" })
-        .check((argv) => {
-          if (
-            typeof argv.branchName !== "string" ||
-            argv.branchName.trim() === ""
-          ) {
+        .positional("branchName", {
+          describe: "Name of branch to create",
+          type: "string",
+        })
+        .option("list", {
+          alias: "l",
+          type: "boolean",
+          description: "List branches",
+        })
+        .option("delete", {
+          alias: "d",
+          type: "string",
+          description: "Delete a branch",
+        });
+    },
+    async (argv) => {
+      const { branchName, list, delete: deletion } = argv;
+      const myGitParentDir = resolveRoot.find();
+
+      const nowSnapshotFullPath = await workDirVersionInrepo();
+      const nowSnapshotTkn = path.relative(
+        path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO),
+        nowSnapshotFullPath
+      );
+      const checkedOutBranch = await fs.promises.readFile(
+        path.resolve(
+          myGitParentDir,
+          MYGIT_DIRNAME,
+          MYGIT_BRANCH,
+          MYGIT_ACTIVE_BRANCH
+        ),
+        "utf-8"
+      );
+
+      // Create branch
+      if (typeof branchName === "string") {
+        if (
+          !/^[a-zA-Z0-9][-a-zA-Z0-9]*(\/[a-zA-Z0-9][-a-zA-Z0-9]*)?$/.test(
+            branchName
+          )
+        ) {
+          console.error("Invalid branch name");
+          process.exit(1);
+        }
+
+        const branchToCreate = branchName.trim();
+        try {
+          const myGitBranchDir = path.resolve(
+            myGitParentDir,
+            MYGIT_DIRNAME,
+            MYGIT_BRANCH
+          );
+
+          // Make new `<branchToCreate>` Dir in `<myGitBranchDir>`
+          await fs.promises.mkdir(path.resolve(myGitBranchDir, branchToCreate));
+          // Make branch's ACTIVITY file with pointer to current snapshot
+          await fs.promises.writeFile(
+            path.resolve(myGitBranchDir, branchToCreate, MYGIT_BRANCH_ACTIVITY),
+            nowSnapshotTkn
+          );
+        } catch (error) {
+          console.error("Error creating branch: ", error);
+          process.exit(1);
+        }
+      }
+
+      // List branches
+      else if (list) {
+        try {
+          const branchDirContents = await fs.promises.readdir(
+            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            {
+              withFileTypes: true,
+            }
+          );
+          // Filter for direct child directories and get their full paths
+          const branches = branchDirContents
+            .filter((item) => item.isDirectory())
+            .map((dir) =>
+              dir.name === checkedOutBranch ? `* ${dir.name}` : dir.name
+            )
+            .sort((a, b) => (a > b ? 1 : b > a ? -1 : 0));
+
+          console.log(`Branches\n════════\n${branches.join("\n")}`);
+        } catch (error) {
+          console.error("Error listing branches: ", error);
+          process.exit(1);
+        }
+      }
+
+      // Delete branch
+      else if (typeof deletion === "string") {
+        if (deletion.trim() === "") {
+          console.error(
+            "Missing branch name. --delete(or -d) must be a non-empty string."
+          );
+          process.exit(1);
+        }
+
+        const markDeleteBranch = deletion.trim();
+
+        try {
+          // 1. HEAD/ACTIVE branch should not be `markDeleteBranch`
+          if (checkedOutBranch === markDeleteBranch) {
             console.error(
-              "A non-empty string is required for the branch name."
+              "CANNOT DELETE. You are 'checked out' on this branch"
             );
             process.exit(1);
           }
-          return true;
-        })
-        .check((argv) => {
-          if (
-            typeof argv.branchName === "string" &&
-            !/^[a-zA-Z0-9][-a-zA-Z0-9]*(\/[a-zA-Z0-9][-a-zA-Z0-9]*)?$/.test(
-              argv.branchName
+
+          // 2. Find branch by the name specified
+          const branchDirContents = await fs.promises.readdir(
+            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            {
+              withFileTypes: true,
+            }
+          );
+          // Find branch for deletion
+          const markedBranchPath = branchDirContents
+            .filter((item) => item.isDirectory())
+            .map((dirEnt) =>
+              path.join(
+                path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+                dirEnt.name
+              )
             )
-          ) {
-            console.error("Invalid branch name");
+            .find((dirname) => path.basename(dirname) === markDeleteBranch);
+
+          if (!markedBranchPath) {
+            console.error(
+              "Branch does not exist! See a list with 'mygit branch --list'."
+            );
             process.exit(1);
           }
-          return true;
-        });
-    },
-    (argv) => {
-      const { branchName } = argv;
 
-      // Make new Dir in `mygit` tawi
+          // `markedBranchPath` is an absolute path
+          await fs.promises.rm(markedBranchPath, { recursive: true });
+
+          console.log("Branch DELETED.");
+        } catch (error) {
+          console.error("Error Deleting branch: ", error);
+          process.exit(1);
+        }
+      } else {
+        // console.error(
+        //   "Please provide branch name to create. See 'mygit branch --help' for other options."
+        // );
+        // process.exit(1);
+        throw "See usage 'mygit branch --help'"; // we throw without stack trace which will trigger show help for the command with this message at the bottom
+      }
     }
   )
   .demandCommand(1, "You must provide a valid command")
-  .option("verbose", {
-    alias: "v",
-    type: "boolean",
-    description: "Run with verbose logging",
-  })
   .parse();
