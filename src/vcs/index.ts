@@ -17,11 +17,13 @@ import {
   MYGIT_REPO,
   MYGIT_STAGING,
   MYGIT_ACTIVE_BRANCH,
+  MYGIT_BRANCH_MAPPER,
 } from "./constants";
 import { getFilePathsUnderDir, shouldStageFile } from "./utils";
 import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
 import { copyDir } from "./utils/copyDir";
 import resolveRoot from "./utils/resolveRoot";
+import { randomUUID } from "node:crypto";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const myGitParentDir = resolveRoot.find();
@@ -92,11 +94,13 @@ yargs(hideBin(process.argv))
         // 2. Create REPO dir
         const repoPath = path.resolve(myGitDirPath, MYGIT_REPO);
         fs.mkdirSync(repoPath);
+
         // 3.  Create BRANCH dir & Create Default BRANCH dir
+        const defaultBranchName = randomUUID();
         const defBranchPath = path.resolve(
           myGitDirPath,
           MYGIT_BRANCH,
-          MYGIT_DEFAULT_BRANCH_NAME
+          defaultBranchName
         );
         fs.mkdirSync(defBranchPath, { recursive: true });
         // 4. Create ACTIVITY file that will include a branch's POINTERs
@@ -107,20 +111,31 @@ yargs(hideBin(process.argv))
         fs.writeFileSync(branchActivityFile, "", {
           encoding: "utf-8",
         });
-        // 5. Create ACTIVE file to track active branch. Default content is written to `MYGIT_DEFAULT_BRANCH_NAME`
+        // 5. Create ACTIVE file to track active branch. Default content is written to `defaultBranchName`
         // Meaning it will be the default active branch
         const activeBranchFile = path.resolve(
           myGitDirPath,
           MYGIT_BRANCH,
           MYGIT_ACTIVE_BRANCH
         );
-        fs.writeFileSync(activeBranchFile, MYGIT_DEFAULT_BRANCH_NAME, {
+        fs.writeFileSync(activeBranchFile, defaultBranchName, {
           encoding: "utf-8",
         });
-        // 6. Create staging file inside `.mygit` directory
+        // 6. Create branch MAPPER.json
+        const mapperFile = path.resolve(
+          myGitDirPath,
+          MYGIT_BRANCH,
+          `${MYGIT_BRANCH_MAPPER}.json`
+        );
+        const mapperContents = [[defaultBranchName, MYGIT_DEFAULT_BRANCH_NAME]];
+        fs.writeFileSync(mapperFile, JSON.stringify(mapperContents), {
+          encoding: "utf-8",
+        });
+
+        // 7. Create staging file inside `.mygit` directory
         const stgFile = path.resolve(myGitDirPath, MYGIT_STAGING);
         fs.writeFileSync(stgFile, "", { encoding: "utf-8" });
-        // 7. Create Head file inside `.mygit` directory
+        // 8. Create Head file inside `.mygit` directory
         const headFile = path.resolve(myGitDirPath, MYGIT_HEAD);
         fs.writeFileSync(headFile, "", { encoding: "utf-8" });
 
@@ -332,34 +347,59 @@ yargs(hideBin(process.argv))
 
         // Copy a version referenced by `head` before adding new files
         const copyOverVersionDir = await workDirVersionInrepo();
-        // If prev vers dir DOES NOT EXIST(e.g in init commit): Copy working directory. NOTE: No need for this, because staging will list all paths(if not in VERSION REPO)
-        // Overwrite files in current version dir with file paths from staging
-        copyDir(
-          path.resolve(repoBase, copyOverVersionDir, "store"),
-          new_V_Base
-        );
+        if (copyOverVersionDir) {
+          // console.log({
+          //   copyOverVersionDir,
+          //   src: path.resolve(repoBase, copyOverVersionDir, "store"),
+          //   dest: new_V_Base,
+          // });
+          // If prev vers dir DOES NOT EXIST(e.g in init commit): Copy working directory. NOTE: No need for this, because staging will list all paths(if not in VERSION REPO)
+          // Overwrite files in current version dir with file paths from staging
+          copyDir({
+            src: path.resolve(repoBase, copyOverVersionDir, "store"),
+            dest: new_V_Base,
+          });
+        }
 
         // Overwrite copied over version with changes from work dir
         for (let i = 0; i < dedupedPaths.length; i++) {
+          // If `wdFilePath` is from STAGING, it should be a relative path
           const wdFilePath = dedupedPaths[i];
-          const dirPath = path.dirname(wdFilePath); // If `wdFilePath` is from STAGING, it should be a relative path
 
-          const wdFilePathContents = fs.readFileSync(
-            path.resolve(myGitParentDir, wdFilePath),
-            "utf-8"
+          const stats = await fs.promises.stat(
+            path.resolve(myGitParentDir, wdFilePath)
           );
-
-          if (dirPath) {
-            // Create `dirPath` replica directory structure
-            fs.mkdirSync(path.join(new_V_Base, dirPath), {
-              recursive: true,
+          if (stats.isDirectory()) {
+            copyDir({
+              src: path.resolve(myGitParentDir, wdFilePath),
+              dest: path.resolve(new_V_Base, wdFilePath),
+              ignore: true,
             });
+          } else if (stats.isFile()) {
+            // `wdFilePath` could be under nested dir structure, and we need to replicate that structure
+            const dirPath = path.dirname(wdFilePath);
+
+            const wdFilePathContents = await fs.promises.readFile(
+              path.resolve(myGitParentDir, wdFilePath),
+              "utf-8"
+            );
+
+            if (dirPath) {
+              // Create `dirPath`: a replica of work dir directory structure - where file will be written
+              await fs.promises.mkdir(path.join(new_V_Base, dirPath), {
+                recursive: true,
+              });
+            }
+            // Write file at its `filepath`
+            await fs.promises.writeFile(
+              path.join(new_V_Base, wdFilePath),
+              wdFilePathContents
+            );
+            // console.log(`${wdFilePath} is a file`);
+          } else {
+            console.warn(`skipping non-regular file: ${wdFilePath}`);
+            continue;
           }
-          // Write file at its `filepath`
-          fs.writeFileSync(
-            path.join(new_V_Base, wdFilePath),
-            wdFilePathContents
-          );
         }
 
         // After versioning, reset the staging index
@@ -458,15 +498,19 @@ yargs(hideBin(process.argv))
         ),
         "utf-8"
       );
+      const branchMapsFilePath = path.resolve(
+        myGitParentDir,
+        MYGIT_DIRNAME,
+        MYGIT_BRANCH,
+        `${MYGIT_BRANCH_MAPPER}.json`
+      );
 
       // Create branch
       if (typeof branchName === "string") {
-        if (
-          !/^[a-zA-Z0-9][-a-zA-Z0-9]*(\/[a-zA-Z0-9][-a-zA-Z0-9]*)?$/.test(
-            branchName
-          )
-        ) {
-          console.error("Invalid branch name");
+        // Valid git-scm branch names: ^[a-zA-Z0-9][-a-zA-Z0-9]*(\/[a-zA-Z0-9][-a-zA-Z0-9]*)?$
+        // Iinvalid directory name: [<>:"/\\|?*\x00-\x1F]+|^\s+|\s+$|^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$|\.$
+        if (!branchName.length) {
+          console.error("Invalid. Branch name must be non-empty string");
           process.exit(1);
         }
 
@@ -478,12 +522,26 @@ yargs(hideBin(process.argv))
             MYGIT_BRANCH
           );
 
-          // Make new `<branchToCreate>` Dir in `<myGitBranchDir>`
-          await fs.promises.mkdir(path.resolve(myGitBranchDir, branchToCreate));
+          const branchMappings = await fs.promises
+            .readFile(branchMapsFilePath, "utf-8")
+            .then((mappings): [string, string][] => JSON.parse(mappings));
+
+          const genBranchName = randomUUID();
+          branchMappings.push([genBranchName, branchToCreate]);
+
+          // Save the modified mappings
+          await fs.promises.writeFile(
+            branchMapsFilePath,
+            JSON.stringify(branchMappings),
+            { encoding: "utf-8" }
+          );
+          // Make new `<genBranchName>` Dir in `<myGitBranchDir>`
+          await fs.promises.mkdir(path.resolve(myGitBranchDir, genBranchName));
           // Make branch's ACTIVITY file with pointer to current snapshot
           await fs.promises.writeFile(
-            path.resolve(myGitBranchDir, branchToCreate, MYGIT_BRANCH_ACTIVITY),
-            nowSnapshotTkn
+            path.resolve(myGitBranchDir, genBranchName, MYGIT_BRANCH_ACTIVITY),
+            nowSnapshotTkn,
+            { encoding: "utf-8" }
           );
         } catch (error) {
           console.error("Error creating branch: ", error);
@@ -494,6 +552,11 @@ yargs(hideBin(process.argv))
       // List branches
       else if (list) {
         try {
+          const branchMappings = await fs.promises
+            .readFile(branchMapsFilePath, "utf-8")
+            .then((mappings): [string, string][] => JSON.parse(mappings));
+          const branchMappingsObj = Object.fromEntries(branchMappings);
+
           const branchDirContents = await fs.promises.readdir(
             path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
             {
@@ -501,14 +564,18 @@ yargs(hideBin(process.argv))
             }
           );
           // Filter for direct child directories and get their full paths
-          const branches = branchDirContents
+          const genBranches = branchDirContents
             .filter((item) => item.isDirectory())
-            .map((dir) =>
-              dir.name === checkedOutBranch ? `* ${dir.name}` : dir.name
-            )
+            .map((dir) => dir.name)
             .sort((a, b) => (a > b ? 1 : b > a ? -1 : 0));
 
-          console.log(`Branches\n════════\n${branches.join("\n")}`);
+          const userNamedBranches = genBranches.map((genBranch) => {
+            return genBranch === checkedOutBranch
+              ? `* ${branchMappingsObj[genBranch]}`
+              : branchMappingsObj[genBranch];
+          });
+
+          console.log(`Branches\n════════\n${userNamedBranches.join("\n")}`);
         } catch (error) {
           console.error("Error listing branches: ", error);
           process.exit(1);
@@ -517,14 +584,22 @@ yargs(hideBin(process.argv))
 
       // Delete branch
       else if (typeof deletion === "string") {
-        if (deletion.trim() === "") {
+        const userGivenBranchName = deletion.trim();
+        if (userGivenBranchName === "") {
           console.error(
             "Missing branch name. --delete(or -d) must be a non-empty string."
           );
           process.exit(1);
         }
 
-        const markDeleteBranch = deletion.trim();
+        const branchMappings = await fs.promises
+          .readFile(branchMapsFilePath, "utf-8")
+          .then((mappings): [string, string][] => JSON.parse(mappings));
+
+        // Get system named equivalent of user named/user given branch name
+        const markDeleteBranch = branchMappings.find(
+          ([systemNamed, userNamed]) => userNamed === userGivenBranchName
+        )[0];
 
         try {
           // 1. HEAD/ACTIVE branch should not be `markDeleteBranch`
@@ -575,6 +650,31 @@ yargs(hideBin(process.argv))
         // process.exit(1);
         throw "See usage 'mygit branch --help'"; // we throw without stack trace which will trigger show help for the command with this message at the bottom
       }
+    }
+  )
+  .command(
+    "switch <branchName>",
+    "switch branches",
+    (yargs) => {
+      return yargs
+        .positional("branchName", {
+          type: "string",
+          describe: "Branch to switch to",
+        })
+        .check((argv) => {
+          if (
+            typeof argv.branchName !== "string" ||
+            argv.branchName.trim() === ""
+          ) {
+            console.error("Branch name must be a non-empty string.");
+            process.exit(1);
+          }
+          return true;
+        });
+    },
+    (argv) => {
+      const { branchName } = argv;
+      const switchToBranch = branchName.trim();
     }
   )
   .demandCommand(1, "You must provide a valid command")

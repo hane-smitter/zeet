@@ -13,9 +13,11 @@ import {
 import resolveRoot from "./resolveRoot";
 
 /**
- * Returns path to current snapshot of the _Work Dir_(gotten from `HEAD`). If nothing, most recent snapshot path of ACTIVE branch is retrieved.
+ * Returns path to current snapshot of the _Work Dir_(gotten from `HEAD`). If nothing, most recent snapshot reference is obtained from ACTIVE branch's ACTIVITY.
  *
  * **Abolute path** is returned
+ *
+ * If snapshot of the work dir is still __NOT FOUND__ in REPO, an empty string is returned.
  */
 export async function workDirVersionInrepo() {
   const myGitParentDir = resolveRoot.find();
@@ -33,38 +35,39 @@ export async function workDirVersionInrepo() {
     .replace(/^.+@/g, "");
 
   // if `nowVersion` read from `head` is not available, then we get latest version store from `REPO`
-  let selectedVersionDir: string | undefined;
+  let selectedVersionDir: string;
   if (nowVersion) {
     selectedVersionDir = path.resolve(repoDir, nowVersion);
-  } else {
-    // This process will read the most recent snapshot token from an ACTIVE branch's ACTIVITY
-    const activeBranch = await fs.promises.readFile(
+    return selectedVersionDir;
+  }
+
+  // This process will read the most recent snapshot token from an ACTIVE branch's ACTIVITY
+  const activeBranch = await fs.promises.readFile(
+    path.resolve(
+      myGitParentDir,
+      MYGIT_DIRNAME,
+      MYGIT_BRANCH,
+      MYGIT_ACTIVE_BRANCH
+    ),
+    "utf-8"
+  );
+  const branchLatestSnap = (
+    await fs.promises.readFile(
       path.resolve(
         myGitParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
-        MYGIT_ACTIVE_BRANCH
+        activeBranch,
+        MYGIT_BRANCH_ACTIVITY
       ),
       "utf-8"
-    );
-    const branchLatestSnap = (
-      await fs.promises.readFile(
-        path.resolve(
-          myGitParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_BRANCH,
-          activeBranch,
-          MYGIT_BRANCH_ACTIVITY
-        ),
-        "utf-8"
-      )
-    ).split(/\r?\n/)[0];
+    )
+  ).split(/\r?\n/)[0];
 
+  if (branchLatestSnap) {
     selectedVersionDir = path.resolve(repoDir, branchLatestSnap);
-
-    // Below is commented since it reads the lastmost created REPO, which may be an anti-pattern
-    // selectedVersionDir = (await getVersionDir(repoDir, "LATEST")) || "";
+    return selectedVersionDir;
   }
 
-  return selectedVersionDir;
+  return "";
 }
