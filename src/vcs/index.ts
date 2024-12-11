@@ -24,6 +24,7 @@ import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
 import { copyDir } from "./utils/copyDir";
 import resolveRoot from "./utils/resolveRoot";
 import { randomUUID } from "node:crypto";
+import { isFilePathUnderDir } from "./utils/isFilePathUnderDir";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const myGitParentDir = resolveRoot.find();
@@ -171,47 +172,84 @@ yargs(hideBin(process.argv))
           process.exit(1);
         }
 
-        let stgFiles = [];
+        let stgFiles: string[] = [];
         // If is a dot(`.`), add current directory to staging(modified and untracked files only)
         if (files.includes(".")) {
-          const allFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.mygitignore` or `.gitignore`
+          const wdFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.mygitignore` or `.gitignore`
 
+          // Filter out file paths that did not change
           const indexableFilePaths = (
             await Promise.all(
-              allFilePaths.map(async (filePath) => {
+              wdFilePaths.map(async (filePath) => {
                 const shouldStage = await shouldStageFile(filePath);
 
-                return shouldStage ? filePath : null;
+                return shouldStage || null;
               })
             )
           ).filter(Boolean);
 
-          stgFiles = [...indexableFilePaths];
+          // NOTE: There's need to find files from previous REPO snapshot, to mark which file are deleted
+          const nowSnapshotPath = await workDirVersionInrepo().then(
+            (vesrionPath) => path.join(vesrionPath, "store")
+          );
+          // Find files in repo that are not in current list of staging files
+          const nowSnapshotFiles = await getFilePathsUnderDir(
+            undefined,
+            nowSnapshotPath
+          );
+          // const wdFiles = await getFilePathsUnderDir();
+          // const deletedFiles = [...new Set([...nowSnapshotFiles, ...wdFilePaths])];
+          const deletedFiles = nowSnapshotFiles
+            .filter((snapshotfile) => {
+              return !wdFilePaths.includes(snapshotfile);
+            })
+            .map((deletedFile) => `D:${deletedFile}`);
+
+          // console.log({ nowSnapshotPath, nowSnapshotFiles, deletedFiles });
+
+          // // Deleted file meaning: file
+          // const isDeletedFIle = !(await isFilePathUnderDir({
+          //   lookupFilePath: file,
+          //   srcDirPath: nowSnapshotPath,
+          // }));
+          // const isDeletedFIle = !(await isFilePathUnderDir({
+          //   lookupFilePath: file,
+          //   srcDirPath: nowSnapshotPath,
+          // }));
+
+          stgFiles = [...indexableFilePaths, ...deletedFiles];
         } else {
           stgFiles = [...files] as string[];
         }
 
-        // if (argv.verbose) {}
-
         // Look up specified files on the disk
-        const fileExistenceInfo = stgFiles.map((file) => {
-          let existentFile: { path: string; exists: boolean } | null;
-          try {
-            // Check if file exists
-            fs.accessSync(
-              path.resolve(myGitParentDir, file),
-              fs.constants.F_OK
-            );
-            existentFile = { path: file, exists: true };
-          } catch (error) {
-            existentFile = {
-              path: file !== "" ? file : "<empty>",
-              exists: false,
-            };
-          }
+        const fileExistenceInfo = await Promise.all(
+          stgFiles.map(async (unsanitizedFile) => {
+            const file = unsanitizedFile.split(":");
+            let existentFile: {
+              path: string;
+              exists: boolean;
+            } | null;
 
-          return existentFile;
-        });
+            try {
+              // Check if file exists; but skip check for 'D' marked file paths
+              if (file[0] !== "D")
+                await fs.promises.access(
+                  path.resolve(myGitParentDir, file[1]),
+                  fs.constants.F_OK
+                );
+
+              existentFile = { path: unsanitizedFile, exists: true };
+            } catch (error) {
+              existentFile = {
+                path: unsanitizedFile !== "" ? unsanitizedFile : "<empty>",
+                exists: false,
+              };
+            }
+
+            return existentFile;
+          })
+        );
 
         // Write existent files to staging file(inside `.mygit`)
         try {
@@ -241,12 +279,14 @@ yargs(hideBin(process.argv))
           // 1. Remove dups
           const dedupedStgContent = [...new Set(stgContentArr)];
           // 2. Confirm the files paths are indexable
-          // Solves case where a file is 'untracked/modified' in previous `mygit add ...`, and now it is undone
+          // Solves case where a file is 'untracked/modified' in previous `mygit add ...`, and now it is undone(in current mygit add ...)
           const confirmedIndexables = (
             await Promise.all(
               dedupedStgContent.map(async function (filePath) {
-                const isIndexable = await shouldStageFile(filePath);
-                return isIndexable ? filePath : null;
+                const file = filePath.split(":");
+                const indexablePath =
+                  file[0] === "D" ? filePath : await shouldStageFile(file[1]);
+                return indexablePath || null;
               })
             )
           ).filter(Boolean);
@@ -256,6 +296,7 @@ yargs(hideBin(process.argv))
             encoding: "utf-8",
           });
 
+          // Files that were not found on disk
           const skippedPaths = fileExistenceInfo
             .filter((fileInfo) => !fileInfo.exists)
             .map((fileInfo) => "\n" + fileInfo.path);
@@ -263,7 +304,7 @@ yargs(hideBin(process.argv))
           if (skippedPaths.length) {
             // Tell about added paths only when we have skipped files
             const addedPaths = confirmedIndexables.map(
-              (filePath) => "\n" + filePath
+              (filePath) => "\n" + filePath.split(":")[1]
             );
             addedPaths.length &&
               console.log(
@@ -332,7 +373,7 @@ yargs(hideBin(process.argv))
           MYGIT_DIRNAME,
           MYGIT_REPO
         );
-        const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // // Location for version snapshot
+        const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // Location for version snapshot
         const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message
 
         // Make Version tracking directory
@@ -364,38 +405,58 @@ yargs(hideBin(process.argv))
         // Overwrite copied over version with changes from work dir
         for (let i = 0; i < dedupedPaths.length; i++) {
           // If `wdFilePath` is from STAGING, it should be a relative path
-          const wdFilePath = dedupedPaths[i];
+          const [fileMode, wdFilePath] = dedupedPaths[i].split(":");
+          // const wdFilePath = dedupedPaths[i];
 
-          const stats = await fs.promises.stat(
-            path.resolve(myGitParentDir, wdFilePath)
-          );
-          if (stats.isDirectory()) {
-            copyDir({
-              src: path.resolve(myGitParentDir, wdFilePath),
-              dest: path.resolve(new_V_Base, wdFilePath),
-              ignore: true,
-            });
-          } else if (stats.isFile()) {
-            // `wdFilePath` could be under nested dir structure, and we need to replicate that structure
-            const dirPath = path.dirname(wdFilePath);
-
-            const wdFilePathContents = await fs.promises.readFile(
-              path.resolve(myGitParentDir, wdFilePath),
-              "utf-8"
+          let stats: fs.Stats;
+          // If mode is 'D', we do not look for the file in work dir since it is not there
+          // We instead look for it in REPO, of immediate previous version - that is being replaced
+          if (fileMode === "D") {
+            stats = await fs.promises.stat(
+              path.resolve(repoBase, copyOverVersionDir, "store", wdFilePath)
             );
+          } else {
+            stats = await fs.promises.stat(
+              path.resolve(myGitParentDir, wdFilePath)
+            );
+          }
 
-            if (dirPath) {
-              // Create `dirPath`: a replica of work dir directory structure - where file will be written
-              await fs.promises.mkdir(path.join(new_V_Base, dirPath), {
-                recursive: true,
+          if (stats.isDirectory()) {
+            const newSnapshotPath = path.resolve(new_V_Base, wdFilePath);
+
+            if (fileMode === "D") {
+              await fs.promises.rm(newSnapshotPath, { recursive: true });
+            } else {
+              copyDir({
+                src: path.resolve(myGitParentDir, wdFilePath),
+                dest: newSnapshotPath,
+                ignore: true,
               });
             }
-            // Write file at its `filepath`
-            await fs.promises.writeFile(
-              path.join(new_V_Base, wdFilePath),
-              wdFilePathContents
-            );
-            // console.log(`${wdFilePath} is a file`);
+          } else if (stats.isFile()) {
+            const newSnapshotPath = path.join(new_V_Base, wdFilePath);
+
+            if (fileMode === "D") {
+              await fs.promises.unlink(newSnapshotPath);
+            } else {
+              // `wdFilePath` could be under nested dir structure, and we need to replicate that structure
+              const dirPath = path.dirname(wdFilePath);
+
+              const wdFilePathContents = await fs.promises.readFile(
+                path.resolve(myGitParentDir, wdFilePath),
+                "utf-8"
+              );
+
+              if (dirPath) {
+                // Create `dirPath`: a replica of work dir directory structure - where file will be written
+                await fs.promises.mkdir(path.join(new_V_Base, dirPath), {
+                  recursive: true,
+                });
+              }
+              // Write file at its `filepath`
+              await fs.promises.writeFile(newSnapshotPath, wdFilePathContents);
+              // console.log(`${wdFilePath} is a file`);
+            }
           } else {
             console.warn(`skipping non-regular file: ${wdFilePath}`);
             continue;
@@ -680,6 +741,22 @@ yargs(hideBin(process.argv))
       );
 
       try {
+        // If files are indexed in staging, abort switch branch proces
+        const stgIndexPath = path.resolve(
+          myGitParentDir,
+          MYGIT_DIRNAME,
+          MYGIT_STAGING
+        );
+        const stgIndex = await fs.promises
+          .readFile(stgIndexPath, "utf-8")
+          .then((filesStr) => filesStr.split(/\r?\n/).filter(Boolean));
+        if (stgIndex.length) {
+          console.error(
+            "You have uncommitted changes. Please commit first. See 'mygit commit --help'."
+          );
+          process.exit(1);
+        }
+
         const branchMappings = await fs.promises
           .readFile(branchMapsFilePath, "utf-8")
           .then((mappings): [string, string][] | undefined =>

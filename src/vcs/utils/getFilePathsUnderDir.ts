@@ -5,18 +5,19 @@ import ignore from "ignore";
 import resolveRoot from "./resolveRoot";
 
 /**
- * Gets file paths under `targetDir` directory. If not specified, it finds file paths under current working directory(`cwd`).
+ * Gets file paths under `targetDir` directory. If not specified, it finds file paths from project root.
  *
  * Path patterns specified in `.mygitignore` are skipped.
- * @param {string} [targetDir = ""]  Directory to find files
- * @param {string} [cwdPath = ""]  Specify current working directpry
- * @returns
+ * @param {string} [targetDir = ""]  Directory to find files.
+ * @param {string} [cwdPath = ""]  Specify current working directory.
+ * @returns {Promise<string[]>} Returns relative file paths. Paths that match ignore patterns are excluded from result.
  */
 export async function getFilePathsUnderDir(
   targetDir: string = "",
   cwdPath: string = ""
-) {
+): Promise<string[]> {
   try {
+    // test comment
     const myGitParentDir = resolveRoot.find();
     const myGitignorePath = path.resolve(myGitParentDir, ".mygitignore");
     const gitignorePath = path.resolve(myGitParentDir, ".gitignore");

@@ -16,34 +16,13 @@ export async function isUntrackedFile(filePath: string) {
   // Can be empty string meaning no snapshot of working dir is found
   if (!selectedVersionDir) return true;
 
-  // console.log("selectedVersionDir from UntrackedFile: ", selectedVersionDir);
-
   const relativeFilePath = path.relative(
     myGitParentDir,
     path.resolve(myGitParentDir, filePath)
   );
-  // console.group("Untracked file");
-  // console.log({
-  //   WDFilePath: filePath,
-  //   "RelativeWD:relativeFilePath": relativeFilePath,
-  //   VCSDirFilePath: path.resolve(selectedVersionDir, "store", relativeFilePath),
-  // });
-  // console.groupEnd();
-
-  // let fileExistsInWD: boolean | undefined;
-  // try {
-  //   await fs.promises.access(filePath, fs.constants.F_OK);
-  //   fileExistsInWD = true;
-  // } catch (error) {
-  //   fileExistsInWD = false;
-  // }
 
   let fileExistsInRepo: boolean | undefined;
   try {
-    // console.log(
-    //   "repo pth:: ",
-    //   path.resolve(selectedVersionDir, "store", relativeFilePath)
-    // );
     await fs.promises.access(
       path.resolve(selectedVersionDir, "store", relativeFilePath),
       fs.constants.F_OK
@@ -53,11 +32,10 @@ export async function isUntrackedFile(filePath: string) {
     fileExistsInRepo = false;
   }
 
-  // console.log(
-  //   "Is untracked file: %s, filepath: %s",
-  //   !fileExistsInRepo,
-  //   path.resolve(selectedVersionDir, "store", relativeFilePath)
-  // );
+  // console.log({
+  //   fileExistsInRepo,
+  //   path: path.resolve(selectedVersionDir, "store", relativeFilePath),
+  // });
 
   // If file exists in working directory and NOT in repo, then it `untracked`
   return !fileExistsInRepo;

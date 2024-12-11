@@ -2,16 +2,15 @@ import { isModifiedFile } from "./isModifiedFile";
 import { isUntrackedFile } from "./isUntrackedFile";
 
 export async function shouldStageFile(filePath: string) {
-  const shouldStage = await isUntrackedFile(filePath).then(
-    async (isUntracked) => {
-      if (!isUntracked) {
-        const isModified = await isModifiedFile(filePath);
-        return isModified;
-      } else {
-        return true;
-      }
-    }
-  );
+  let shouldStage = "";
+  const isUntracked = await isUntrackedFile(filePath);
+
+  if (!isUntracked) {
+    const isModified = await isModifiedFile(filePath);
+    isModified && (shouldStage = `M:${filePath}`);
+  } else if (isUntracked) {
+    shouldStage = `U:${filePath}`;
+  }
 
   return shouldStage;
 }
