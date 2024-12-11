@@ -9,13 +9,18 @@ import resolveRoot from "./resolveRoot";
  *
  * Path patterns specified in `.mygitignore` are skipped.
  * @param {string} [targetDir = ""]  Directory to find files
+ * @param {string} [cwdPath = ""]  Specify current working directpry
  * @returns
  */
-export async function getFilePathsUnderDir(targetDir: string = "") {
+export async function getFilePathsUnderDir(
+  targetDir: string = "",
+  cwdPath: string = ""
+) {
   try {
     const myGitParentDir = resolveRoot.find();
     const myGitignorePath = path.resolve(myGitParentDir, ".mygitignore");
     const gitignorePath = path.resolve(myGitParentDir, ".gitignore");
+    const cwd = cwdPath || myGitParentDir;
 
     // Load `.mygitignore` file. If not exist, Load `.gitignore`
     let myGitignorePatterns: string[] = [];
@@ -33,7 +38,7 @@ export async function getFilePathsUnderDir(targetDir: string = "") {
       ? `${targetDir.replace(/(\/)+$/, "")}/**`
       : "**/*";
     const files = await glob(scanDirPattern, {
-      cwd: myGitParentDir,
+      cwd,
       nodir: true,
       dot: true,
       ignore: ["node_modules/**", ".git/**", ".mygit/**"],

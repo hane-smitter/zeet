@@ -543,41 +543,10 @@ yargs(hideBin(process.argv))
             nowSnapshotTkn,
             { encoding: "utf-8" }
           );
+
+          console.log("Branch created SUCCESSFULLY.");
         } catch (error) {
           console.error("Error creating branch: ", error);
-          process.exit(1);
-        }
-      }
-
-      // List branches
-      else if (list) {
-        try {
-          const branchMappings = await fs.promises
-            .readFile(branchMapsFilePath, "utf-8")
-            .then((mappings): [string, string][] => JSON.parse(mappings));
-          const branchMappingsObj = Object.fromEntries(branchMappings);
-
-          const branchDirContents = await fs.promises.readdir(
-            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
-            {
-              withFileTypes: true,
-            }
-          );
-          // Filter for direct child directories and get their full paths
-          const genBranches = branchDirContents
-            .filter((item) => item.isDirectory())
-            .map((dir) => dir.name)
-            .sort((a, b) => (a > b ? 1 : b > a ? -1 : 0));
-
-          const userNamedBranches = genBranches.map((genBranch) => {
-            return genBranch === checkedOutBranch
-              ? `* ${branchMappingsObj[genBranch]}`
-              : branchMappingsObj[genBranch];
-          });
-
-          console.log(`Branches\n════════\n${userNamedBranches.join("\n")}`);
-        } catch (error) {
-          console.error("Error listing branches: ", error);
           process.exit(1);
         }
       }
@@ -643,12 +612,39 @@ yargs(hideBin(process.argv))
           console.error("Error Deleting branch: ", error);
           process.exit(1);
         }
-      } else {
-        // console.error(
-        //   "Please provide branch name to create. See 'mygit branch --help' for other options."
-        // );
-        // process.exit(1);
-        throw "See usage 'mygit branch --help'"; // we throw without stack trace which will trigger show help for the command with this message at the bottom
+      }
+
+      // List branches - Also matches when `list` option is provided
+      else {
+        try {
+          const branchMappings = await fs.promises
+            .readFile(branchMapsFilePath, "utf-8")
+            .then((mappings): [string, string][] => JSON.parse(mappings));
+          const branchMappingsObj = Object.fromEntries(branchMappings);
+
+          const branchDirContents = await fs.promises.readdir(
+            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            {
+              withFileTypes: true,
+            }
+          );
+          // Filter for direct child directories and get their full paths
+          const genBranches = branchDirContents
+            .filter((item) => item.isDirectory())
+            .map((dir) => dir.name);
+
+          const userNamedBranches = genBranches.map((genBranch) => {
+            return genBranch === checkedOutBranch
+              ? `* ${branchMappingsObj[genBranch]}`
+              : branchMappingsObj[genBranch];
+          });
+          userNamedBranches.sort((a, b) => a.localeCompare(b));
+
+          console.log(`Branches\n════════\n${userNamedBranches.join("\n")}`);
+        } catch (error) {
+          console.error("Error listing branches: ", error);
+          process.exit(1);
+        }
       }
     }
   )
@@ -672,9 +668,93 @@ yargs(hideBin(process.argv))
           return true;
         });
     },
-    (argv) => {
+    async (argv) => {
+      const myGitParentDir = resolveRoot.find();
       const { branchName } = argv;
       const switchToBranch = branchName.trim();
+      const branchMapsFilePath = path.resolve(
+        myGitParentDir,
+        MYGIT_DIRNAME,
+        MYGIT_BRANCH,
+        `${MYGIT_BRANCH_MAPPER}.json`
+      );
+
+      try {
+        const branchMappings = await fs.promises
+          .readFile(branchMapsFilePath, "utf-8")
+          .then((mappings): [string, string][] | undefined =>
+            JSON.parse(mappings)
+          );
+
+        const sysNamedBranchFind = branchMappings.find(function ([
+          systemNamed,
+          userNamed,
+        ]) {
+          return userNamed === switchToBranch;
+        });
+
+        const sysNamedBranch = sysNamedBranchFind
+          ? sysNamedBranchFind[0]
+          : undefined;
+
+        if (!sysNamedBranch) {
+          console.error(
+            "Branch does not exist! See a list with 'mygit branch --list'."
+          );
+          process.exit(1);
+        }
+
+        const branchDirPath = path.resolve(
+          myGitParentDir,
+          MYGIT_DIRNAME,
+          MYGIT_BRANCH
+        );
+        // 1. Update ACTIVE branch
+        await fs.promises.writeFile(
+          path.resolve(branchDirPath, MYGIT_ACTIVE_BRANCH),
+          sysNamedBranch,
+          { encoding: "utf-8" }
+        );
+
+        // 2. Update HEAD
+        // Get branch's latest snapshot
+        const branchLatestSnapshot = (
+          await fs.promises.readFile(
+            path.resolve(branchDirPath, sysNamedBranch, MYGIT_BRANCH_ACTIVITY),
+            "utf-8"
+          )
+        ).split(/\r?\n/)[0];
+        await fs.promises.writeFile(
+          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
+          `${sysNamedBranch}@${branchLatestSnapshot}`,
+          { encoding: "utf-8" }
+        );
+
+        // 3. Picke POINTER from branch's ACTIVITY
+        // 4. Reset work dir with contents of pointer
+        const snapshotStorePath = path.resolve(
+          myGitParentDir,
+          MYGIT_DIRNAME,
+          MYGIT_REPO,
+          branchLatestSnapshot,
+          "store"
+        );
+
+        // const snapshotFiles = await getFilePathsUnderDir(
+        //   undefined,
+        //   snapshotStorePath
+        // );
+
+        copyDir({
+          src: snapshotStorePath,
+          dest: myGitParentDir,
+        });
+
+        console.log(`Switched SUCCESSFULLY to branch: ${switchToBranch}.`);
+      } catch (error) {
+        console.error("Error switching branch: ", error);
+        process.exit(1);
+      }
     }
   )
   .demandCommand(1, "You must provide a valid command")
