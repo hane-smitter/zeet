@@ -205,18 +205,6 @@ yargs(hideBin(process.argv))
             })
             .map((deletedFile) => `D:${deletedFile}`);
 
-          // console.log({ nowSnapshotPath, nowSnapshotFiles, deletedFiles });
-
-          // // Deleted file meaning: file
-          // const isDeletedFIle = !(await isFilePathUnderDir({
-          //   lookupFilePath: file,
-          //   srcDirPath: nowSnapshotPath,
-          // }));
-          // const isDeletedFIle = !(await isFilePathUnderDir({
-          //   lookupFilePath: file,
-          //   srcDirPath: nowSnapshotPath,
-          // }));
-
           stgFiles = [...indexableFilePaths, ...deletedFiles];
         } else {
           stgFiles = [...files] as string[];
@@ -566,7 +554,7 @@ yargs(hideBin(process.argv))
         `${MYGIT_BRANCH_MAPPER}.json`
       );
 
-      // Create branch
+      // 1. Create branch
       if (typeof branchName === "string") {
         // Valid git-scm branch names: ^[a-zA-Z0-9][-a-zA-Z0-9]*(\/[a-zA-Z0-9][-a-zA-Z0-9]*)?$
         // Iinvalid directory name: [<>:"/\\|?*\x00-\x1F]+|^\s+|\s+$|^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$|\.$
@@ -586,6 +574,21 @@ yargs(hideBin(process.argv))
           const branchMappings = await fs.promises
             .readFile(branchMapsFilePath, "utf-8")
             .then((mappings): [string, string][] => JSON.parse(mappings));
+
+          // Check if given branch name already exists
+          const branchExists = (function () {
+            const found = branchMappings.find(
+              ([systemNamed, userNamed]) => userNamed === branchToCreate
+            );
+
+            return Boolean(found);
+          })();
+          if (branchExists) {
+            console.error(
+              `The branch: ${branchToCreate}, already exists!.\nSwitch to it with 'mygit switch ${branchToCreate}'`
+            );
+            process.exit(1);
+          }
 
           const genBranchName = randomUUID();
           branchMappings.push([genBranchName, branchToCreate]);
@@ -612,7 +615,7 @@ yargs(hideBin(process.argv))
         }
       }
 
-      // Delete branch
+      // 2. Delete branch
       else if (typeof deletion === "string") {
         const userGivenBranchName = deletion.trim();
         if (userGivenBranchName === "") {
@@ -675,7 +678,7 @@ yargs(hideBin(process.argv))
         }
       }
 
-      // List branches - Also matches when `list` option is provided
+      // 3. List branches - Also matches when `list` option is provided
       else {
         try {
           const branchMappings = await fs.promises
@@ -741,7 +744,7 @@ yargs(hideBin(process.argv))
       );
 
       try {
-        // If files are indexed in staging, abort switch branch proces
+        // If files are indexed in staging, rest the index
         const stgIndexPath = path.resolve(
           myGitParentDir,
           MYGIT_DIRNAME,
@@ -751,10 +754,7 @@ yargs(hideBin(process.argv))
           .readFile(stgIndexPath, "utf-8")
           .then((filesStr) => filesStr.split(/\r?\n/).filter(Boolean));
         if (stgIndex.length) {
-          console.error(
-            "You have uncommitted changes. Please commit first. See 'mygit commit --help'."
-          );
-          process.exit(1);
+          await fs.promises.writeFile(stgIndexPath, "");
         }
 
         const branchMappings = await fs.promises
@@ -816,16 +816,34 @@ yargs(hideBin(process.argv))
           branchLatestSnapshot,
           "store"
         );
-
-        // const snapshotFiles = await getFilePathsUnderDir(
-        //   undefined,
-        //   snapshotStorePath
-        // );
-
         copyDir({
           src: snapshotStorePath,
           dest: myGitParentDir,
         });
+
+        // 5. Replay deleted files on work dir
+        const wdFiles = await getFilePathsUnderDir();
+        const snapShotFiles = await getFilePathsUnderDir(
+          undefined,
+          snapshotStorePath
+        );
+        const wdRemoveFiles = wdFiles.filter((wdFile) => {
+          return !snapShotFiles.includes(wdFile);
+        });
+        if (wdRemoveFiles.length) {
+          await Promise.all(
+            wdRemoveFiles.map(async (wdFile) => {
+              try {
+                await fs.promises.unlink(path.join(myGitParentDir, wdFile));
+              } catch (error) {
+                console.error(
+                  `[Branch switch]Failed to clean up file in: ${wdFile}`,
+                  error
+                );
+              }
+            })
+          );
+        }
 
         console.log(`Switched SUCCESSFULLY to branch: ${switchToBranch}.`);
       } catch (error) {
