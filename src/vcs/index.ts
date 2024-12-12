@@ -2,12 +2,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import yargs, {
-  showHelp,
-  showHelpOnFail,
-  type ArgumentsCamelCase,
-} from "yargs";
+import yargs, { type ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
+
 import {
   MYGIT_BRANCH,
   MYGIT_DEFAULT_BRANCH_NAME,
@@ -25,6 +22,8 @@ import { copyDir } from "./utils/copyDir";
 import resolveRoot from "./utils/resolveRoot";
 import { randomUUID } from "node:crypto";
 import { isFilePathUnderDir } from "./utils/isFilePathUnderDir";
+import { synchronizeDestWithSrc } from "./utils/synchronizeDestWithSrc";
+import { merge } from "./providers/merge";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const myGitParentDir = resolveRoot.find();
@@ -178,15 +177,17 @@ yargs(hideBin(process.argv))
           const wdFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.mygitignore` or `.gitignore`
 
           // Filter out file paths that did not change
-          const indexableFilePaths = (
-            await Promise.all(
-              wdFilePaths.map(async (filePath) => {
-                const shouldStage = await shouldStageFile(filePath);
+          const indexableFilePaths = await Promise.all(
+            wdFilePaths.map(async (filePath) => {
+              const shouldStage = await shouldStageFile(filePath);
 
-                return shouldStage || null;
-              })
+              return shouldStage || null;
+            })
+          ).then((filePaths) =>
+            filePaths.filter((filePath): filePath is string =>
+              Boolean(filePath)
             )
-          ).filter(Boolean);
+          );
 
           // NOTE: There's need to find files from previous REPO snapshot, to mark which file are deleted
           const nowSnapshotPath = await workDirVersionInrepo().then(
@@ -207,7 +208,35 @@ yargs(hideBin(process.argv))
 
           stgFiles = [...indexableFilePaths, ...deletedFiles];
         } else {
-          stgFiles = [...files] as string[];
+          const decoratedFilePaths = await Promise.all(
+            files.map(async (filePath) => {
+              let shouldStage = "";
+              try {
+                await shouldStageFile(filePath);
+              } catch (error) {
+                if (
+                  error instanceof Error &&
+                  (error as NodeJS.ErrnoException).code
+                ) {
+                  const fsError = error as NodeJS.ErrnoException;
+
+                  // If error is due to file not found Allow to proceed with a decorator of `u`.
+                  // It will be filtered in the next steps as `not found`
+                  if (fsError.code === "ENOENT") {
+                    shouldStage = `U:${filePath}`;
+                  }
+                }
+              }
+
+              return shouldStage || null;
+            })
+          ).then((filePaths) =>
+            filePaths.filter((filePath): filePath is string =>
+              Boolean(filePath)
+            )
+          );
+
+          stgFiles = [...decoratedFilePaths];
         }
 
         // Look up specified files on the disk
@@ -268,16 +297,18 @@ yargs(hideBin(process.argv))
           const dedupedStgContent = [...new Set(stgContentArr)];
           // 2. Confirm the files paths are indexable
           // Solves case where a file is 'untracked/modified' in previous `mygit add ...`, and now it is undone(in current mygit add ...)
-          const confirmedIndexables = (
-            await Promise.all(
-              dedupedStgContent.map(async function (filePath) {
-                const file = filePath.split(":");
-                const indexablePath =
-                  file[0] === "D" ? filePath : await shouldStageFile(file[1]);
-                return indexablePath || null;
-              })
+          const confirmedIndexables = await Promise.all(
+            dedupedStgContent.map(async function (filePath) {
+              const file = filePath.split(":");
+              const indexablePath =
+                file[0] === "D" ? filePath : await shouldStageFile(file[1]);
+              return indexablePath || null;
+            })
+          ).then((filePaths) =>
+            filePaths.filter((filePath): filePath is string =>
+              Boolean(filePath)
             )
-          ).filter(Boolean);
+          );
 
           const prunedStgContent = confirmedIndexables.join("\n") + "\n";
           await fs.promises.writeFile(stgIndexPath, prunedStgContent, {
@@ -630,9 +661,10 @@ yargs(hideBin(process.argv))
           .then((mappings): [string, string][] => JSON.parse(mappings));
 
         // Get system named equivalent of user named/user given branch name
-        const markDeleteBranch = branchMappings.find(
-          ([systemNamed, userNamed]) => userNamed === userGivenBranchName
-        )[0];
+        const markedBranchMap = branchMappings.find(
+          ([_systemNamed, userNamed]) => userNamed === userGivenBranchName
+        );
+        const markDeleteBranch = markedBranchMap ? markedBranchMap[0] : "";
 
         try {
           // 1. HEAD/ACTIVE branch should not be `markDeleteBranch`
@@ -735,7 +767,7 @@ yargs(hideBin(process.argv))
     async (argv) => {
       const myGitParentDir = resolveRoot.find();
       const { branchName } = argv;
-      const switchToBranch = branchName.trim();
+      const switchToBranch = branchName!.trim();
       const branchMapsFilePath = path.resolve(
         myGitParentDir,
         MYGIT_DIRNAME,
@@ -759,12 +791,10 @@ yargs(hideBin(process.argv))
 
         const branchMappings = await fs.promises
           .readFile(branchMapsFilePath, "utf-8")
-          .then((mappings): [string, string][] | undefined =>
-            JSON.parse(mappings)
-          );
+          .then((mappings): [string, string][] => JSON.parse(mappings));
 
         const sysNamedBranchFind = branchMappings.find(function ([
-          systemNamed,
+          _systemNamed,
           userNamed,
         ]) {
           return userNamed === switchToBranch;
@@ -807,7 +837,7 @@ yargs(hideBin(process.argv))
           { encoding: "utf-8" }
         );
 
-        // 3. Picke POINTER from branch's ACTIVITY
+        // 3. Pick POINTER from branch's ACTIVITY
         // 4. Reset work dir with contents of pointer
         const snapshotStorePath = path.resolve(
           myGitParentDir,
@@ -816,41 +846,40 @@ yargs(hideBin(process.argv))
           branchLatestSnapshot,
           "store"
         );
-        copyDir({
+
+        await synchronizeDestWithSrc({
           src: snapshotStorePath,
           dest: myGitParentDir,
         });
 
-        // 5. Replay deleted files on work dir
-        const wdFiles = await getFilePathsUnderDir();
-        const snapShotFiles = await getFilePathsUnderDir(
-          undefined,
-          snapshotStorePath
-        );
-        const wdRemoveFiles = wdFiles.filter((wdFile) => {
-          return !snapShotFiles.includes(wdFile);
-        });
-        if (wdRemoveFiles.length) {
-          await Promise.all(
-            wdRemoveFiles.map(async (wdFile) => {
-              try {
-                await fs.promises.unlink(path.join(myGitParentDir, wdFile));
-              } catch (error) {
-                console.error(
-                  `[Branch switch]Failed to clean up file in: ${wdFile}`,
-                  error
-                );
-              }
-            })
-          );
-        }
-
-        console.log(`Switched SUCCESSFULLY to branch: ${switchToBranch}.`);
+        console.log(`Switched to branch: ${switchToBranch}.`);
       } catch (error) {
         console.error("Error switching branch: ", error);
         process.exit(1);
       }
     }
+  )
+  .command(
+    "merge <branchName>",
+    "Merge branches",
+    (yargs) => {
+      return yargs
+        .positional("branchName", {
+          type: "string",
+          describe: "Branch to merge with",
+        })
+        .check((argv) => {
+          if (
+            typeof argv.branchName !== "string" ||
+            argv.branchName.trim() === ""
+          ) {
+            console.error("Branch name must be a non-empty string.");
+            process.exit(1);
+          }
+          return true;
+        });
+    },
+    merge
   )
   .demandCommand(1, "You must provide a valid command")
   .parse();

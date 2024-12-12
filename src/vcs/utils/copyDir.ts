@@ -37,7 +37,7 @@ export function copyDir({
     fs.mkdirSync(dest, { recursive: true });
   }
 
-  let ig: Ignore | null;
+  let ig: Ignore | null = null;
   if (ignore) {
     const myGitignorePath = path.resolve(myGitParentDir, ".mygitignore");
     const gitignorePath = path.resolve(myGitParentDir, ".gitignore");

@@ -38,7 +38,7 @@ export async function isFilePathUnderDir({
     withFileTypes: true,
   });
 
-  let ig: Ignore = null;
+  let ig: Ignore | null = null;
   if (ignore) {
     ig = loadIgnorePatterns();
   }
