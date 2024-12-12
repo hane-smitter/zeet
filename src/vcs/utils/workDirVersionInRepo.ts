@@ -12,14 +12,18 @@ import {
 // import { getVersionDir } from "./getVersionDir";
 import resolveRoot from "./resolveRoot";
 
+// `${new_V_DirName}&${branch1Tip}&${branch2Tip}&${mergeBase}`
+/[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+$/;
+
 /**
  * Returns path to current snapshot of the _Work Dir_(gotten from `HEAD`). If nothing, most recent snapshot reference is obtained from ACTIVE branch's ACTIVITY.
  *
  * **Abolute path** is returned
  *
  * If snapshot of the work dir is still __NOT FOUND__ in REPO, an empty string is returned.
+ * @param {boolean} [raw] If `true` current commit returned won't be sanitized. Return value will still look normal with exception when current snapshot is by a merge commit that appears differently in the way it is constructed.
  */
-export async function workDirVersionInrepo() {
+export async function workDirVersionInrepo(raw?: boolean) {
   const myGitParentDir = resolveRoot.find();
   const repoDir = path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO);
 
@@ -30,10 +34,18 @@ export async function workDirVersionInrepo() {
   );
   // `myGitVersionTracker` should be a file with a single entry
   //  We are `split`ting by newline `\n` character just to ensure we get first only string(incase there's more)
-  const nowVersion = (await fs.promises.readFile(myGitVersionTracker, "utf-8"))
+  let nowVersion = (await fs.promises.readFile(myGitVersionTracker, "utf-8"))
     .split(/\r?\n/)[0]
+    // Remove branch name
     .replace(/^.+@/g, "");
 
+  if (!raw) {
+    // If merge commit, remove parent commits identifiers
+    nowVersion = nowVersion.replace(
+      /&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+$/,
+      ""
+    );
+  }
   // if `nowVersion` read from `head` is not available, then we get latest version store from `REPO`
   let selectedVersionDir: string;
   if (nowVersion) {
@@ -51,7 +63,7 @@ export async function workDirVersionInrepo() {
     ),
     "utf-8"
   );
-  const branchLatestSnap = (
+  let branchLatestSnap = (
     await fs.promises.readFile(
       path.resolve(
         myGitParentDir,
@@ -64,6 +76,13 @@ export async function workDirVersionInrepo() {
     )
   ).split(/\r?\n/)[0];
 
+  if (!raw) {
+    // If merge commit, remove parent commits identifiers
+    branchLatestSnap = branchLatestSnap.replace(
+      /&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+$/,
+      ""
+    );
+  }
   if (branchLatestSnap) {
     selectedVersionDir = path.resolve(repoDir, branchLatestSnap);
     return selectedVersionDir;

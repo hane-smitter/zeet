@@ -34,12 +34,12 @@ export async function prepNewVersionDir(mygitMsg: string, copySrc?: string) {
   });
 
   // A version to source contents for current version (before it is later overwritten with newer content)
-  const copyOverVersionDir = copySrc || (await workDirVersionInrepo());
+  const copyOverVersionDir = await workDirVersionInrepo();
   if (copyOverVersionDir) {
     // If prev vers dir DOES NOT EXIST(e.g in init commit): Copy working directory. NOTE: No need for this, because staging will list all paths(if not in VERSION REPO)
     // Overwrite files in current version dir with file paths from staging
     copyDir({
-      src: path.resolve(repoBase, copyOverVersionDir, "store"),
+      src: copySrc || path.resolve(repoBase, copyOverVersionDir, "store"),
       dest: new_V_Base,
     });
   }

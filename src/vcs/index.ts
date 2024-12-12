@@ -764,7 +764,10 @@ yargs(hideBin(process.argv))
             myGitParentDir,
             MYGIT_DIRNAME,
             MYGIT_REPO,
-            branchLatestSnapshot,
+            branchLatestSnapshot.replace(
+              /&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+$/,
+              ""
+            ),
             "store"
           );
 
