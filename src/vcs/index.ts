@@ -24,6 +24,8 @@ import { randomUUID } from "node:crypto";
 import { isFilePathUnderDir } from "./utils/isFilePathUnderDir";
 import { synchronizeDestWithSrc } from "./utils/synchronizeDestWithSrc";
 import { merge } from "./providers/merge";
+import { prepNewVersionDir } from "./utils/prepNewVersionDir";
+import { commitCloseRoutine } from "./utils/commitCloseRoutine";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const myGitParentDir = resolveRoot.find();
@@ -212,7 +214,7 @@ yargs(hideBin(process.argv))
             files.map(async (filePath) => {
               let shouldStage = "";
               try {
-                await shouldStageFile(filePath);
+                shouldStage = await shouldStageFile(filePath);
               } catch (error) {
                 if (
                   error instanceof Error &&
@@ -318,7 +320,7 @@ yargs(hideBin(process.argv))
           // Files that were not found on disk
           const skippedPaths = fileExistenceInfo
             .filter((fileInfo) => !fileInfo.exists)
-            .map((fileInfo) => "\n" + fileInfo.path);
+            .map((fileInfo) => "\n" + fileInfo.path.split(":")[1]);
 
           if (skippedPaths.length) {
             // Tell about added paths only when we have skipped files
@@ -380,46 +382,8 @@ yargs(hideBin(process.argv))
           process.exit(1);
         }
 
-        // Generate snapshot directory name
-        const new_V_DirName =
-          Math.trunc(Math.random() * 1000000)
-            .toString(32)
-            .toUpperCase() +
-          "_" +
-          Date.now().toString();
-        const repoBase = path.resolve(
-          myGitParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_REPO
-        );
-        const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // Location for version snapshot
-        const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message
-
-        // Make Version tracking directory
-        fs.mkdirSync(new_V_Base, { recursive: true });
-        // Make version meta directory
-        fs.mkdirSync(mygitMsgBase); // not specifying `recursive`
-
-        // Save version message
-        fs.writeFileSync(path.join(mygitMsgBase, "MYGITMSG"), message, {
-          encoding: "utf-8",
-        });
-
-        // Copy a version referenced by `head` before adding new files
-        const copyOverVersionDir = await workDirVersionInrepo();
-        if (copyOverVersionDir) {
-          // console.log({
-          //   copyOverVersionDir,
-          //   src: path.resolve(repoBase, copyOverVersionDir, "store"),
-          //   dest: new_V_Base,
-          // });
-          // If prev vers dir DOES NOT EXIST(e.g in init commit): Copy working directory. NOTE: No need for this, because staging will list all paths(if not in VERSION REPO)
-          // Overwrite files in current version dir with file paths from staging
-          copyDir({
-            src: path.resolve(repoBase, copyOverVersionDir, "store"),
-            dest: new_V_Base,
-          });
-        }
+        const { repoBase, copyOverVersionDir, new_V_Base, new_V_DirName } =
+          await prepNewVersionDir(message);
 
         // Overwrite copied over version with changes from work dir
         for (let i = 0; i < dedupedPaths.length; i++) {
@@ -482,55 +446,7 @@ yargs(hideBin(process.argv))
           }
         }
 
-        // After versioning, reset the staging index
-        fs.writeFileSync(
-          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
-          "",
-          {
-            encoding: "utf-8",
-          }
-        );
-        // After versioning, update the `HEAD`
-        const currentActiveBranch = fs
-          .readFileSync(
-            path.resolve(
-              myGitParentDir,
-              MYGIT_DIRNAME,
-              MYGIT_BRANCH,
-              MYGIT_ACTIVE_BRANCH
-            ),
-            "utf-8"
-          )
-          .split(/\r?\n/)[0];
-        const updatedHead = currentActiveBranch + "@" + new_V_DirName;
-        fs.writeFileSync(
-          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
-          updatedHead,
-          { encoding: "utf-8" }
-        );
-        // After versioning, update a branch's `ACTIVITY` with the `new_V_DirName`
-        // Reading file belonging to a branch that stores pointers
-        const existingPointers = fs.readFileSync(
-          path.resolve(
-            myGitParentDir,
-            MYGIT_DIRNAME,
-            MYGIT_BRANCH,
-            currentActiveBranch,
-            MYGIT_BRANCH_ACTIVITY
-          ),
-          "utf-8"
-        );
-        const updatedPointers = new_V_DirName + "\n" + existingPointers;
-        fs.writeFileSync(
-          path.resolve(
-            myGitParentDir,
-            MYGIT_DIRNAME,
-            MYGIT_BRANCH,
-            currentActiveBranch,
-            MYGIT_BRANCH_ACTIVITY
-          ),
-          updatedPointers
-        );
+        commitCloseRoutine(new_V_DirName);
 
         // console.log("stagedPaths SPLIT: ", stagedPaths.split("\n"));
         // console.log({ dedupedPaths });
@@ -565,10 +481,12 @@ yargs(hideBin(process.argv))
       const myGitParentDir = resolveRoot.find();
 
       const nowSnapshotFullPath = await workDirVersionInrepo();
-      const nowSnapshotTkn = path.relative(
-        path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO),
-        nowSnapshotFullPath
-      );
+      const nowSnapshotTkn = nowSnapshotFullPath
+        ? path.relative(
+            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO),
+            nowSnapshotFullPath
+          )
+        : "";
       const checkedOutBranch = await fs.promises.readFile(
         path.resolve(
           myGitParentDir,
@@ -609,7 +527,7 @@ yargs(hideBin(process.argv))
           // Check if given branch name already exists
           const branchExists = (function () {
             const found = branchMappings.find(
-              ([systemNamed, userNamed]) => userNamed === branchToCreate
+              ([_systemNamed, userNamed]) => userNamed === branchToCreate
             );
 
             return Boolean(found);
@@ -776,7 +694,7 @@ yargs(hideBin(process.argv))
       );
 
       try {
-        // If files are indexed in staging, rest the index
+        // If files are indexed in staging, reset the index
         const stgIndexPath = path.resolve(
           myGitParentDir,
           MYGIT_DIRNAME,
@@ -831,26 +749,30 @@ yargs(hideBin(process.argv))
             "utf-8"
           )
         ).split(/\r?\n/)[0];
-        await fs.promises.writeFile(
-          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
-          `${sysNamedBranch}@${branchLatestSnapshot}`,
-          { encoding: "utf-8" }
-        );
+        // console.log({ branchLatestSnapshot });
 
-        // 3. Pick POINTER from branch's ACTIVITY
-        // 4. Reset work dir with contents of pointer
-        const snapshotStorePath = path.resolve(
-          myGitParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_REPO,
-          branchLatestSnapshot,
-          "store"
-        );
+        if (branchLatestSnapshot) {
+          await fs.promises.writeFile(
+            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
+            `${sysNamedBranch}@${branchLatestSnapshot}`,
+            { encoding: "utf-8" }
+          );
 
-        await synchronizeDestWithSrc({
-          src: snapshotStorePath,
-          dest: myGitParentDir,
-        });
+          // 3. Pick POINTER from branch's ACTIVITY
+          // 4. Reset work dir with contents of pointer
+          const snapshotStorePath = path.resolve(
+            myGitParentDir,
+            MYGIT_DIRNAME,
+            MYGIT_REPO,
+            branchLatestSnapshot,
+            "store"
+          );
+
+          await synchronizeDestWithSrc({
+            src: snapshotStorePath,
+            dest: myGitParentDir,
+          });
+        }
 
         console.log(`Switched to branch: ${switchToBranch}.`);
       } catch (error) {
