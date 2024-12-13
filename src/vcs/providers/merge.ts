@@ -390,9 +390,9 @@ export const merge = async (
           preferNewerChanges: false,
           preserveConflicts: true,
           conflictMarkers: {
-            start: `<<<<<<<<<<<<<<<<<<<<<<${branchMappingsObj[mergeBranch1]}`,
-            separator: "=====================================",
-            end: `>>>>>>>>>>>>>>>>>>>>>>${branchMappingsObj[mergeBranch2]}`,
+            start: `<<<<<<<<<<<<<<<<<<<<${branchMappingsObj[mergeBranch1]}`,
+            separator: "====================",
+            end: `>>>>>>>>>>>>>>>>>>>>${branchMappingsObj[mergeBranch2]}`,
           },
         }
       );
@@ -479,11 +479,15 @@ export const merge = async (
       console.log(styleText("green", "Merge completed SUCCESSFULY"));
     }
     // Log conflicts that occured
-    else if (mergeConflicts.length) {
+    else if (mergeConflicts.length > 0) {
       // Undo the merge REPO created. NOTE: This will leave changes aplied to files
       console.log(
-        `Conflicts happened(%d). Removing dir: ${new_V_Base}...`,
-        mergeConflicts.length
+        `Conflicts happened(%d). Removing dir: ${path.join(
+          repoBase,
+          new_V_DirName
+        )}. Merge REPO version was (%s)..`,
+        mergeConflicts.length,
+        path.basename(path.dirname(new_V_Base))
       ); // TODO: Remove after done
       await fs.promises.rm(path.join(repoBase, new_V_DirName), {
         recursive: true,
@@ -732,14 +736,37 @@ class AdvancedFileMerge {
     conflict: ConflictDetails,
     markers: ConflictMarkers
   ): string {
-    return content.replace(
-      conflict.originalContent,
-      `${markers.start}
-${conflict.hunk.lines.join("\n")}
+    const lines = content.split(/\r?\n/); // Split content into lines
+    const { hunk } = conflict;
+
+    // Convert 1-based index to 0-based index for slicing
+    const conflictStartIdx = hunk.oldStart - 1;
+    const conflictEndIdx = conflictStartIdx + hunk.oldLines;
+
+    // Extract lines before and after the conflict
+    const beforeConflict = lines.slice(0, conflictStartIdx).join("\n");
+    const afterConflict = lines.slice(conflictEndIdx).join("\n");
+
+    // Extract old (to be removed) and new (to be added) conflicting lines
+    const oldConflictingLines = hunk.lines
+      .filter((line) => line.startsWith("-")) // Lines to be removed
+      .map((line) => line.slice(1).trim()); // Remove '-' and trim whitespace
+
+    const newConflictingLines = hunk.lines
+      .filter((line) => line.startsWith("+")) // Lines to be added
+      .map((line) => line.slice(1).trim()); // Remove '+' and trim whitespace
+
+    // Construct the conflict-marked section
+    const conflictMarkedSection = `${markers.start}
+${oldConflictingLines.join("\n")}
 ${markers.separator}
-${conflict.originalContent}
-${markers.end}`
-    );
+${newConflictingLines.join("\n")}
+${markers.end}`;
+
+    // Combine sections
+    return [beforeConflict, conflictMarkedSection, afterConflict]
+      .filter(Boolean) // Remove empty sections
+      .join("\n");
   }
 
   /**
