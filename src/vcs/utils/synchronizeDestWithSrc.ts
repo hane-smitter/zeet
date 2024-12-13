@@ -47,10 +47,12 @@ export async function synchronizeDestWithSrc({
   });
 
   // Remove files on `dest` that are not in `src`
-  const srcFiles = await getFilePathsUnderDir(undefined, src);
+  const srcFiles = await getFilePathsUnderDir(undefined, src).then(
+    (paths) => new Set(paths)
+  );
   const destFiles = await getFilePathsUnderDir(undefined, dest);
   const destFilesToRemove = destFiles.filter((destFile) => {
-    return !srcFiles.includes(destFile);
+    return !srcFiles.has(destFile);
   });
   if (destFilesToRemove.length) {
     await Promise.all(

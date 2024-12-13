@@ -297,13 +297,11 @@ export const merge = async (
     // }[] = [];
     const mergeConflicts: {
       file: string;
-      application: string;
-      msg: string;
     }[] = [];
     const mergeCommitMsg = `Merge '${branchMappingsObj[mergeBranch2]}' branch into ${branchMappingsObj[mergeBranch1]}`;
 
     // console.log({ mergeBaseSnapPath });
-    const { new_V_Base, new_V_DirName } = await prepNewVersionDir(
+    const { repoBase, new_V_Base, new_V_DirName } = await prepNewVersionDir(
       mergeCommitMsg,
       mergeBaseSnapPath
     );
@@ -369,30 +367,67 @@ export const merge = async (
         "utf-8"
       );
 
-      // Gen diff between br1 and ancestor commit
-      const br1Patch = Diff.createPatch(
-        filePath,
-        basePathContents || "",
-        br2FilePathContents
-      );
-      // Gen diff between br2 and ancestor commit
-      const br2Patch = Diff.createPatch(
-        filePath,
-        basePathContents || "",
-        br2FilePathContents
-      );
+      // // Gen diff between br1 and ancestor commit
+      // const br1Patch = Diff.createPatch(
+      //   filePath,
+      //   basePathContents || "",
+      //   br2FilePathContents
+      // );
+      // // Gen diff between br2 and ancestor commit
+      // const br2Patch = Diff.createPatch(
+      //   filePath,
+      //   basePathContents || "",
+      //   br2FilePathContents
+      // );
 
       // Combine the diffs
       // Method prefers newer content when conflicts are detected
-      const mergedContent = AdvancedFileMerge.mergeFiles(
+      const [mergedContent, isConflicting] = AdvancedFileMerge.mergeFiles(
         basePathContents || "",
         br1FilePathContents || "",
-        br2FilePathContents
+        br2FilePathContents,
+        {
+          preferNewerChanges: false,
+          preserveConflicts: true,
+          conflictMarkers: {
+            start: `<<<<<<<<<<<<<<<<<<<<<<${branchMappingsObj[mergeBranch1]}`,
+            separator: "=====================================",
+            end: `>>>>>>>>>>>>>>>>>>>>>>${branchMappingsObj[mergeBranch2]}`,
+          },
+        }
       );
+
+      // `isConflicting` will be `true` `mergedContent` is marked with conflict markers.
+      // When conflicts are solved with newest change automatically, `isConflicting` won't be true in this case.
+      if (isConflicting) {
+        mergeConflicts.push({ file: filePath });
+      }
+
       const patchApplyPath = path.join(new_V_Base, filePath);
+      const dirPath = path.dirname(patchApplyPath);
+      const patchApplyPathContents = await fs.promises
+        .readFile(patchApplyPath, "utf-8")
+        .catch((err) => "");
+
+      // TODO: Remove `if` block after testing
+      if (patchApplyPathContents === "") {
+        console.log("patchApplyPathContents id emtpy for the path: ", {
+          patchApplyPathContents,
+          filePath,
+          mergedContent,
+        });
+      }
+
+      if (dirPath && !fs.existsSync(dirPath)) {
+        console.log("dirPath does NOT EXIST! Creating: (%s) ...", dirPath); // TODO: Remove after testing is done
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
       await fs.promises.writeFile(patchApplyPath, mergedContent, {
         encoding: "utf-8",
       });
+      // Log colored diffs summary
+      beautyDiffsPrint(patchApplyPathContents, mergedContent, filePath);
+
       // const combinedPatch = combineDiffs(br1Patch, br2Patch);
 
       // Patch application
@@ -426,13 +461,16 @@ export const merge = async (
       // }
     }
 
-    if (mergeConflicts.length === 0) {
-      await synchronizeDestWithSrc({
-        src: new_V_Base,
-        dest: myGitParentDir,
-      });
+    // Synchronize the work dir regardless if conflicts occured or not
+    console.log("Synchronizing dir..."); // TODO: Remove after done
+    await synchronizeDestWithSrc({
+      src: new_V_Base,
+      dest: myGitParentDir,
+    });
 
-      // Do commit(Only when there are no conflicts. Otherwise version created is undone)
+    // If merge conflicts do not exist, we do a merge commit, else we remove the merge version creted while maintaining changes in work dir
+    // This is so to allow one to fix conflicts and do their own commit
+    if (mergeConflicts.length === 0) {
       // Update head, active branch e.t.c
       // [version][br1][br2][base]
       const mergeCommitNaming = `${new_V_DirName}&${branch1Tip}&${branch2Tip}&${mergeBase}`;
@@ -442,17 +480,23 @@ export const merge = async (
     }
     // Log conflicts that occured
     else if (mergeConflicts.length) {
+      // Undo the merge REPO created. NOTE: This will leave changes aplied to files
+      console.log(
+        `Conflicts happened(%d). Removing dir: ${new_V_Base}...`,
+        mergeConflicts.length
+      ); // TODO: Remove after done
+      await fs.promises.rm(path.join(repoBase, new_V_DirName), {
+        recursive: true,
+      });
+
       console.group("Merge encountered conflicts in the following paths:");
       mergeConflicts.forEach((conflict) => {
-        console.log(styleText("red", conflict.file + "\n"));
+        console.log(styleText("red", conflict.file));
       });
       console.groupEnd();
       console.log(
         "Changes could not be merged for above path.\nYou can manually fix conflicts at the filepaths, then commit."
       );
-
-      // Undo the merge REPO created. NOTE: This will leave changes aplied to files
-      await fs.promises.rm(new_V_Base, { recursive: true });
     }
   } else {
     console.error(
@@ -490,18 +534,20 @@ function beautyDiffsPrint(
   );
 
   const addedDecoratorSymbol = editedTkns.addedCount
-    ? Array.from({ length: editedTkns.addedCount }, () => "+").join("")
+    ? `${Array.from({ length: editedTkns.addedCount }, () => "+").join("")}`
     : "";
   const removedDecoratorSymbol = editedTkns.removedCount
-    ? Array.from({ length: editedTkns.removedCount }, () => "-").join("")
+    ? `${Array.from({ length: editedTkns.removedCount }, () => "-").join("")}`
     : "";
 
   if (addedDecoratorSymbol || removedDecoratorSymbol) {
     console.log(
-      `${editedTkns.path}: ${styleText(
-        "green",
-        addedDecoratorSymbol
-      )}${styleText("red", removedDecoratorSymbol)}`
+      `${editedTkns.path} (${
+        editedTkns.addedCount + editedTkns.removedCount
+      }) │ ${styleText("green", addedDecoratorSymbol)}${styleText(
+        "red",
+        removedDecoratorSymbol
+      )}`
     );
   }
 }
@@ -544,14 +590,14 @@ class AdvancedFileMerge {
    * @param file1Content First modified file content
    * @param file2Content Second modified file content
    * @param options Merge configuration options
-   * @returns Merged file content
+   * @returns Merged file content and boolean if conflict occured
    */
   public static mergeFiles(
     baseContent: string,
     file1Content: string,
     file2Content: string,
     options: Partial<MergeOptions> = {}
-  ): string {
+  ): [string, boolean] {
     // Merge default options with provided options
     const mergeOptions: MergeOptions = {
       ...this.defaultOptions,
@@ -595,14 +641,14 @@ class AdvancedFileMerge {
    * @param diff1 Diff from first file
    * @param diff2 Diff from second file
    * @param options Merge options
-   * @returns Merged content
+   * @returns An array of length `2`. Index `1` is Merged content, index `2` is boolean if conflicts happened in the merge
    */
   private static intelligentMerge(
     baseContent: string,
     diff1: Diff.ParsedDiff,
     diff2: Diff.ParsedDiff,
     options: MergeOptions
-  ): string {
+  ): [string, boolean] {
     let mergedContent = baseContent;
     const conflicts: ConflictDetails[] = [];
 
@@ -635,11 +681,12 @@ class AdvancedFileMerge {
     });
 
     // Resolve conflicts
-    if (conflicts.length > 0) {
+    const hasConflicts = conflicts.length > 0;
+    if (hasConflicts) {
       mergedContent = this.resolveConflicts(mergedContent, conflicts, options);
     }
 
-    return mergedContent;
+    return [mergedContent, hasConflicts && options.preserveConflicts];
   }
 
   /**
