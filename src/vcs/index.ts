@@ -729,6 +729,21 @@ yargs(hideBin(process.argv))
           process.exit(1);
         }
 
+        const checkedOutBranchPath = path.resolve(
+          myGitParentDir,
+          MYGIT_DIRNAME,
+          MYGIT_BRANCH,
+          MYGIT_ACTIVE_BRANCH
+        );
+        const checkedOutBranch = await fs.promises.readFile(
+          checkedOutBranchPath,
+          "utf-8"
+        );
+        if (sysNamedBranch === checkedOutBranch) {
+          console.log("Already on branch!");
+          process.exit(1);
+        }
+
         const branchDirPath = path.resolve(
           myGitParentDir,
           MYGIT_DIRNAME,
