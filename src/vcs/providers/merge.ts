@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-// import chalk from "chalk";
+import { styleText } from "node:util";
 import { type ArgumentsCamelCase } from "yargs";
 import * as Diff from "diff";
 
@@ -16,7 +16,6 @@ import {
 } from "../constants";
 import { getFilePathsUnderDir } from "../utils";
 import { synchronizeDestWithSrc } from "../utils/synchronizeDestWithSrc";
-import { styleText } from "node:util";
 import { prepNewVersionDir } from "../utils/prepNewVersionDir";
 import { commitCloseRoutine } from "../utils/commitCloseRoutine";
 
@@ -250,15 +249,6 @@ export const merge = async (
       "store"
     );
 
-    // `${branch_1_Activity[1]}&${branch2Tip}&${mergeBase}` === branch_1_Activity[0]; // The it is already merged
-
-    // const headFilePath = path.resolve(
-    //   myGitParentDir,
-    //   MYGIT_DIRNAME,
-    //   MYGIT_HEAD
-    // );
-    // const headContent = await fs.promises.readFile(headFilePath, "utf-8");
-    // const parseHc = parseMergeCommt(headContent);
     if (
       `${branch_1_Activity[1]}&${branch2Tip}&${mergeBase}` ===
       branch_1_Activity[0].replace(/^.+?&/, "")
@@ -278,23 +268,6 @@ export const merge = async (
       process.exit(1);
     }
 
-    // get files under 'mergeBase' snapshot store
-    // const mergeBaseFilesSet = await getFilePathsUnderDir(
-    //   undefined,
-    //   mergeBaseSnapPath
-    // ).then((filePaths) => new Set(filePaths));
-
-    // 1. get files under 'br 1 tip' snapshot store, then diff against base
-    // const br_1_SnapshotFiles = await getFilePathsUnderDir(
-    //   undefined,
-    //   branch_1_TipSnapPath
-    // );
-
-    // const br1MergeConflicts: {
-    //   file: string;
-    //   application: string;
-    //   msg: string;
-    // }[] = [];
     const mergeConflicts: {
       file: string;
     }[] = [];
@@ -367,19 +340,6 @@ export const merge = async (
         "utf-8"
       );
 
-      // // Gen diff between br1 and ancestor commit
-      // const br1Patch = Diff.createPatch(
-      //   filePath,
-      //   basePathContents || "",
-      //   br2FilePathContents
-      // );
-      // // Gen diff between br2 and ancestor commit
-      // const br2Patch = Diff.createPatch(
-      //   filePath,
-      //   basePathContents || "",
-      //   br2FilePathContents
-      // );
-
       // Combine the diffs
       // Method prefers newer content when conflicts are detected
       const [mergedContent, isConflicting] = AdvancedFileMerge.mergeFiles(
@@ -390,9 +350,9 @@ export const merge = async (
           preferNewerChanges: false,
           preserveConflicts: true,
           conflictMarkers: {
-            start: `<<<<<<<<<<<<<<<<<<<<${branchMappingsObj[mergeBranch1]}`,
+            start: `<<<<<<<<<<<<<<<<<<<< (${branchMappingsObj[mergeBranch1]})`,
             separator: "====================",
-            end: `>>>>>>>>>>>>>>>>>>>>${branchMappingsObj[mergeBranch2]}`,
+            end: `>>>>>>>>>>>>>>>>>>>> (${branchMappingsObj[mergeBranch2]})`,
           },
         }
       );
@@ -409,17 +369,7 @@ export const merge = async (
         .readFile(patchApplyPath, "utf-8")
         .catch((err) => "");
 
-      // TODO: Remove `if` block after testing
-      if (patchApplyPathContents === "") {
-        console.log("patchApplyPathContents id emtpy for the path: ", {
-          patchApplyPathContents,
-          filePath,
-          mergedContent,
-        });
-      }
-
       if (dirPath && !fs.existsSync(dirPath)) {
-        console.log("dirPath does NOT EXIST! Creating: (%s) ...", dirPath); // TODO: Remove after testing is done
         fs.mkdirSync(dirPath, { recursive: true });
       }
       await fs.promises.writeFile(patchApplyPath, mergedContent, {
@@ -427,42 +377,9 @@ export const merge = async (
       });
       // Log colored diffs summary
       beautyDiffsPrint(patchApplyPathContents, mergedContent, filePath);
-
-      // const combinedPatch = combineDiffs(br1Patch, br2Patch);
-
-      // Patch application
-      // const patchApplyPath = path.join(new_V_Base, filePath);
-      // const patchApplyPathContents = await fs.promises
-      //   .readFile(patchApplyPath, "utf-8")
-      //   .catch((err) => "");
-
-      // const dirPath = path.dirname(patchApplyPath);
-
-      // if (dirPath && !fs.existsSync(dirPath)) {
-      //   fs.mkdirSync(dirPath, { recursive: true });
-      // }
-
-      // const mergedContent = Diff.applyPatch(
-      //   patchApplyPathContents,
-      //   combinedPatch
-      // );
-      // if (mergedContent === false) {
-      //   mergeConflicts.push({
-      //     file: filePath,
-      //     msg: "Conflict detected when applying patch",
-      //     application: `${branchMappingsObj[mergeBranch2]} onto ${branchMappingsObj[mergeBranch1]}`,
-      //   });
-      // } else {
-      //   await fs.promises.writeFile(patchApplyPath, mergedContent, {
-      //     encoding: "utf-8",
-      //   });
-
-      //   beautyDiffsPrint(patchApplyPath, mergedContent, filePath);
-      // }
     }
 
     // Synchronize the work dir regardless if conflicts occured or not
-    console.log("Synchronizing dir..."); // TODO: Remove after done
     await synchronizeDestWithSrc({
       src: new_V_Base,
       dest: myGitParentDir,
@@ -481,14 +398,6 @@ export const merge = async (
     // Log conflicts that occured
     else if (mergeConflicts.length > 0) {
       // Undo the merge REPO created. NOTE: This will leave changes aplied to files
-      console.log(
-        `Conflicts happened(%d). Removing dir: ${path.join(
-          repoBase,
-          new_V_DirName
-        )}. Merge REPO version was (%s)..`,
-        mergeConflicts.length,
-        path.basename(path.dirname(new_V_Base))
-      ); // TODO: Remove after done
       await fs.promises.rm(path.join(repoBase, new_V_DirName), {
         recursive: true,
       });
@@ -785,64 +694,3 @@ ${markers.end}`;
     );
   }
 }
-
-// function combineDiffs(diff1: string, diff2: string): string {
-//   // Split diff content into lines for processing
-//   const diff1Lines: string[] = diff1.split("\n");
-//   const diff2Lines: string[] = diff2.split("\n");
-
-//   // Define a map to store file changes by file name
-//   const fileDiffs: Record<string, string[][]> = {};
-
-//   // Helper function to parse and store hunks by file
-//   function parseDiff(
-//     lines: string[],
-//     fileDiffMap: Record<string, string[][]>
-//   ): void {
-//     let currentFile: string | null = null;
-//     let currentHunk: string[] = [];
-
-//     lines.forEach((line) => {
-//       if (line.startsWith("---") || line.startsWith("+++")) {
-//         // New file encountered, save the previous file's changes
-//         if (currentFile && currentHunk.length > 0) {
-//           fileDiffMap[currentFile] = (fileDiffMap[currentFile] || []).concat([
-//             currentHunk,
-//           ]);
-//         }
-//         currentFile = line.substring(4).trim(); // Extract the file name
-//         currentHunk = [];
-//       } else if (line.startsWith("@@")) {
-//         // Start of a new hunk
-//         if (currentHunk.length > 0) {
-//           fileDiffMap[currentFile!] = (fileDiffMap[currentFile!] || []).concat([
-//             currentHunk,
-//           ]);
-//         }
-//         currentHunk = [line]; // Start a new hunk
-//       } else {
-//         currentHunk.push(line); // Add line to the current hunk
-//       }
-//     });
-
-//     // Add the final hunk to the map
-//     if (currentFile && currentHunk.length > 0) {
-//       fileDiffMap[currentFile] = (fileDiffMap[currentFile] || []).concat([
-//         currentHunk,
-//       ]);
-//     }
-//   }
-
-//   // Parse both diff inputs
-//   parseDiff(diff1Lines, fileDiffs);
-//   parseDiff(diff2Lines, fileDiffs);
-
-//   // Combine all file diffs into a single diff string
-//   let combinedDiff = "";
-//   for (const [file, hunks] of Object.entries(fileDiffs)) {
-//     combinedDiff += `--- ${file}\n+++ ${file}\n`;
-//     combinedDiff += hunks.flat().join("\n") + "\n";
-//   }
-
-//   return combinedDiff;
-// }
