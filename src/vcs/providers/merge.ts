@@ -383,37 +383,47 @@ export const merge = async (
       );
 
       // Combine the diffs
-      const combinedPatch = combineDiffs(br1Patch, br2Patch);
+      // Method prefers newer content when conflicts are detected
+      const mergedContent = AdvancedFileMerge.mergeFiles(
+        basePathContents || "",
+        br1FilePathContents || "",
+        br2FilePathContents
+      );
+      const patchApplyPath = path.join(new_V_Base, filePath);
+      await fs.promises.writeFile(patchApplyPath, mergedContent, {
+        encoding: "utf-8",
+      });
+      // const combinedPatch = combineDiffs(br1Patch, br2Patch);
 
       // Patch application
-      const patchApplyPath = path.join(new_V_Base, filePath);
-      const patchApplyPathContents = await fs.promises
-        .readFile(patchApplyPath, "utf-8")
-        .catch((err) => "");
+      // const patchApplyPath = path.join(new_V_Base, filePath);
+      // const patchApplyPathContents = await fs.promises
+      //   .readFile(patchApplyPath, "utf-8")
+      //   .catch((err) => "");
 
-      const dirPath = path.dirname(patchApplyPath);
+      // const dirPath = path.dirname(patchApplyPath);
 
-      if (dirPath && !fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-      }
+      // if (dirPath && !fs.existsSync(dirPath)) {
+      //   fs.mkdirSync(dirPath, { recursive: true });
+      // }
 
-      const mergedContent = Diff.applyPatch(
-        patchApplyPathContents,
-        combinedPatch
-      );
-      if (mergedContent === false) {
-        mergeConflicts.push({
-          file: filePath,
-          msg: "Conflict detected when applying patch",
-          application: `${branchMappingsObj[mergeBranch2]} onto ${branchMappingsObj[mergeBranch1]}`,
-        });
-      } else {
-        await fs.promises.writeFile(patchApplyPath, mergedContent, {
-          encoding: "utf-8",
-        });
+      // const mergedContent = Diff.applyPatch(
+      //   patchApplyPathContents,
+      //   combinedPatch
+      // );
+      // if (mergedContent === false) {
+      //   mergeConflicts.push({
+      //     file: filePath,
+      //     msg: "Conflict detected when applying patch",
+      //     application: `${branchMappingsObj[mergeBranch2]} onto ${branchMappingsObj[mergeBranch1]}`,
+      //   });
+      // } else {
+      //   await fs.promises.writeFile(patchApplyPath, mergedContent, {
+      //     encoding: "utf-8",
+      //   });
 
-        beautyDiffsPrint(patchApplyPath, mergedContent, filePath);
-      }
+      //   beautyDiffsPrint(patchApplyPath, mergedContent, filePath);
+      // }
     }
 
     if (mergeConflicts.length === 0) {
@@ -495,82 +505,270 @@ function beautyDiffsPrint(
     );
   }
 }
-// function parseMergeCommt(commit: string) {
-//   const identifiers = {
-//     br1: "",
-//     br2: "",
-//     base: "",
-//   };
-//   console.log({ b444: commit });
-//   const mcCommitIdentiersStr = commit.replace(/^.+@.+?&/, "");
-//   console.log({ mcCommitIdentiersStr });
-//   if (mcCommitIdentiersStr.length) {
-//     const parts = mcCommitIdentiersStr.split("&");
-//     identifiers.br1 = parts[0];
-//     identifiers.br2 = parts[1];
-//     identifiers.base = parts[2];
-//   }
 
-//   return identifiers;
-// }
+// Interfaces for type safety
+interface ConflictMarkers {
+  start: string;
+  separator: string;
+  end: string;
+}
 
-function combineDiffs(diff1: string, diff2: string): string {
-  // Split diff content into lines for processing
-  const diff1Lines: string[] = diff1.split("\n");
-  const diff2Lines: string[] = diff2.split("\n");
+interface MergeOptions {
+  conflictMarkers: ConflictMarkers;
+  preserveConflicts: boolean;
+  preferNewerChanges: boolean;
+}
 
-  // Define a map to store file changes by file name
-  const fileDiffs: Record<string, string[][]> = {};
+interface ConflictDetails {
+  hunk: Diff.Hunk;
+  originalContent: string;
+}
 
-  // Helper function to parse and store hunks by file
-  function parseDiff(
-    lines: string[],
-    fileDiffMap: Record<string, string[][]>
-  ): void {
-    let currentFile: string | null = null;
-    let currentHunk: string[] = [];
+class AdvancedFileMerge {
+  /**
+   * Default merge configuration
+   */
+  private static defaultOptions: MergeOptions = {
+    conflictMarkers: {
+      start: "<<<<<<< File1",
+      separator: "=======",
+      end: ">>>>>>> File2",
+    },
+    preserveConflicts: false,
+    preferNewerChanges: true,
+  };
 
-    lines.forEach((line) => {
-      if (line.startsWith("---") || line.startsWith("+++")) {
-        // New file encountered, save the previous file's changes
-        if (currentFile && currentHunk.length > 0) {
-          fileDiffMap[currentFile] = (fileDiffMap[currentFile] || []).concat([
-            currentHunk,
-          ]);
-        }
-        currentFile = line.substring(4).trim(); // Extract the file name
-        currentHunk = [];
-      } else if (line.startsWith("@@")) {
-        // Start of a new hunk
-        if (currentHunk.length > 0) {
-          fileDiffMap[currentFile!] = (fileDiffMap[currentFile!] || []).concat([
-            currentHunk,
-          ]);
-        }
-        currentHunk = [line]; // Start a new hunk
-      } else {
-        currentHunk.push(line); // Add line to the current hunk
-      }
-    });
+  /**
+   * Merge changes from two file contents with intelligent conflict resolution
+   * @param baseContent Original file content
+   * @param file1Content First modified file content
+   * @param file2Content Second modified file content
+   * @param options Merge configuration options
+   * @returns Merged file content
+   */
+  public static mergeFiles(
+    baseContent: string,
+    file1Content: string,
+    file2Content: string,
+    options: Partial<MergeOptions> = {}
+  ): string {
+    // Merge default options with provided options
+    const mergeOptions: MergeOptions = {
+      ...this.defaultOptions,
+      ...options,
+      conflictMarkers: {
+        ...this.defaultOptions.conflictMarkers,
+        ...(options.conflictMarkers || {}),
+      },
+      preserveConflicts:
+        options.preserveConflicts ?? this.defaultOptions.preserveConflicts,
+      preferNewerChanges:
+        options.preferNewerChanges ?? this.defaultOptions.preferNewerChanges,
+    };
 
-    // Add the final hunk to the map
-    if (currentFile && currentHunk.length > 0) {
-      fileDiffMap[currentFile] = (fileDiffMap[currentFile] || []).concat([
-        currentHunk,
-      ]);
+    try {
+      // Generate structured diffs
+      const diff1 = Diff.structuredPatch(
+        "base",
+        "file1",
+        baseContent,
+        file1Content
+      );
+      const diff2 = Diff.structuredPatch(
+        "base",
+        "file2",
+        baseContent,
+        file2Content
+      );
+
+      // Advanced merge strategy
+      return this.intelligentMerge(baseContent, diff1, diff2, mergeOptions);
+    } catch (error) {
+      console.error("Merge process failed:", error);
+      throw error;
     }
   }
 
-  // Parse both diff inputs
-  parseDiff(diff1Lines, fileDiffs);
-  parseDiff(diff2Lines, fileDiffs);
+  /**
+   * Intelligent merge with conflict resolution
+   * @param baseContent Original file content
+   * @param diff1 Diff from first file
+   * @param diff2 Diff from second file
+   * @param options Merge options
+   * @returns Merged content
+   */
+  private static intelligentMerge(
+    baseContent: string,
+    diff1: Diff.ParsedDiff,
+    diff2: Diff.ParsedDiff,
+    options: MergeOptions
+  ): string {
+    let mergedContent = baseContent;
+    const conflicts: ConflictDetails[] = [];
 
-  // Combine all file diffs into a single diff string
-  let combinedDiff = "";
-  for (const [file, hunks] of Object.entries(fileDiffs)) {
-    combinedDiff += `--- ${file}\n+++ ${file}\n`;
-    combinedDiff += hunks.flat().join("\n") + "\n";
+    // Combine and sort hunks
+    const allHunks = [...diff1.hunks, ...diff2.hunks].sort(
+      (a, b) => a.oldStart - b.oldStart
+    );
+
+    // Apply patches with conflict detection
+    allHunks.forEach((hunk) => {
+      try {
+        // Try applying the patch
+        const patchedContent = Diff.applyPatch(mergedContent, {
+          hunks: [hunk],
+        });
+
+        // If patch applies cleanly
+        if (patchedContent !== false) {
+          mergedContent = patchedContent;
+        } else {
+          // Conflict detected
+          conflicts.push({
+            hunk,
+            originalContent: mergedContent,
+          });
+        }
+      } catch (error) {
+        console.warn("Patch application failed:", error);
+      }
+    });
+
+    // Resolve conflicts
+    if (conflicts.length > 0) {
+      mergedContent = this.resolveConflicts(mergedContent, conflicts, options);
+    }
+
+    return mergedContent;
   }
 
-  return combinedDiff;
+  /**
+   * Resolve merge conflicts
+   * @param content Current merged content
+   * @param conflicts List of conflicts
+   * @param options Merge options
+   * @returns Content with resolved conflicts
+   */
+  private static resolveConflicts(
+    content: string,
+    conflicts: ConflictDetails[],
+    options: MergeOptions
+  ): string {
+    let resolvedContent = content;
+
+    conflicts.forEach((conflict) => {
+      if (options.preserveConflicts) {
+        // Add conflict markers
+        resolvedContent = this.addConflictMarkers(
+          resolvedContent,
+          conflict,
+          options.conflictMarkers
+        );
+      } else if (options.preferNewerChanges) {
+        // Prefer newer changes (in this case, second file's changes)
+        resolvedContent = this.preferNewerChanges(resolvedContent, conflict);
+      }
+    });
+
+    return resolvedContent;
+  }
+
+  /**
+   * Add conflict markers to unresolved changes
+   * @param content Current content
+   * @param conflict Conflict details
+   * @param markers Conflict marker configuration
+   * @returns Content with conflict markers
+   */
+  private static addConflictMarkers(
+    content: string,
+    conflict: ConflictDetails,
+    markers: ConflictMarkers
+  ): string {
+    return content.replace(
+      conflict.originalContent,
+      `${markers.start}
+${conflict.hunk.lines.join("\n")}
+${markers.separator}
+${conflict.originalContent}
+${markers.end}`
+    );
+  }
+
+  /**
+   * Prefer newer changes (second file's changes)
+   * @param content Current content
+   * @param conflict Conflict details
+   * @returns Content with newer changes
+   */
+  private static preferNewerChanges(
+    content: string,
+    conflict: ConflictDetails
+  ): string {
+    return content.replace(
+      conflict.originalContent,
+      conflict.hunk.lines.join("\n")
+    );
+  }
 }
+
+// function combineDiffs(diff1: string, diff2: string): string {
+//   // Split diff content into lines for processing
+//   const diff1Lines: string[] = diff1.split("\n");
+//   const diff2Lines: string[] = diff2.split("\n");
+
+//   // Define a map to store file changes by file name
+//   const fileDiffs: Record<string, string[][]> = {};
+
+//   // Helper function to parse and store hunks by file
+//   function parseDiff(
+//     lines: string[],
+//     fileDiffMap: Record<string, string[][]>
+//   ): void {
+//     let currentFile: string | null = null;
+//     let currentHunk: string[] = [];
+
+//     lines.forEach((line) => {
+//       if (line.startsWith("---") || line.startsWith("+++")) {
+//         // New file encountered, save the previous file's changes
+//         if (currentFile && currentHunk.length > 0) {
+//           fileDiffMap[currentFile] = (fileDiffMap[currentFile] || []).concat([
+//             currentHunk,
+//           ]);
+//         }
+//         currentFile = line.substring(4).trim(); // Extract the file name
+//         currentHunk = [];
+//       } else if (line.startsWith("@@")) {
+//         // Start of a new hunk
+//         if (currentHunk.length > 0) {
+//           fileDiffMap[currentFile!] = (fileDiffMap[currentFile!] || []).concat([
+//             currentHunk,
+//           ]);
+//         }
+//         currentHunk = [line]; // Start a new hunk
+//       } else {
+//         currentHunk.push(line); // Add line to the current hunk
+//       }
+//     });
+
+//     // Add the final hunk to the map
+//     if (currentFile && currentHunk.length > 0) {
+//       fileDiffMap[currentFile] = (fileDiffMap[currentFile] || []).concat([
+//         currentHunk,
+//       ]);
+//     }
+//   }
+
+//   // Parse both diff inputs
+//   parseDiff(diff1Lines, fileDiffs);
+//   parseDiff(diff2Lines, fileDiffs);
+
+//   // Combine all file diffs into a single diff string
+//   let combinedDiff = "";
+//   for (const [file, hunks] of Object.entries(fileDiffs)) {
+//     combinedDiff += `--- ${file}\n+++ ${file}\n`;
+//     combinedDiff += hunks.flat().join("\n") + "\n";
+//   }
+
+//   return combinedDiff;
+// }
