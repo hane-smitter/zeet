@@ -40,8 +40,14 @@ You need to ensure you have [_node.js_](https://nodejs.org/en/download/package-m
    npm install
    ```
 
-3. **Link the CLI tool globally**:
-   After cloning the project, use the `npm link` command to make the tool available globally on your machine.
+3. **Build CLI tool**:
+
+   ```bash
+   npm run build
+   ```
+
+4. **Link the CLI tool globally**:
+   After cloning the project and building, use the `npm link` command to make the tool available globally on your machine.
 
    ```bash
    npm link
