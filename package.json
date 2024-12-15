@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/hane-smitter/mygit#readme",
   "devDependencies": {
+    "@types/blessed": "^0.1.25",
     "@types/diff": "^6.0.0",
     "@types/node": "20.x.x",
     "@types/yargs": "^17.0.33",
@@ -36,6 +37,7 @@
     "mygit": "dist/vcs/index.js"
   },
   "dependencies": {
+    "blessed": "^0.1.81",
     "diff": "^7.0.0",
     "glob": "^11.0.0",
     "ignore": "^6.0.2",

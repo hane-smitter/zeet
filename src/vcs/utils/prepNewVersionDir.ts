@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { copyDir } from "./copyDir";
-import { MYGIT_DIRNAME, MYGIT_REPO } from "../constants";
+import { MYGIT_DIRNAME, MYGIT_MESSAGE, MYGIT_REPO } from "../constants";
 import { workDirVersionInrepo } from "./workDirVersionInRepo";
 import resolveRoot from "./resolveRoot";
 
@@ -29,7 +29,7 @@ export async function prepNewVersionDir(mygitMsg: string, copySrc?: string) {
   fs.mkdirSync(mygitMsgBase); // not specifying `recursive`
 
   // Save version message
-  fs.writeFileSync(path.join(mygitMsgBase, "MYGITMSG"), mygitMsg, {
+  fs.writeFileSync(path.join(mygitMsgBase, MYGIT_MESSAGE), mygitMsg, {
     encoding: "utf-8",
   });
 

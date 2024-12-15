@@ -26,6 +26,7 @@ import { synchronizeDestWithSrc } from "./utils/synchronizeDestWithSrc";
 import { merge } from "./providers/merge";
 import { prepNewVersionDir } from "./utils/prepNewVersionDir";
 import { commitCloseRoutine } from "./utils/commitCloseRoutine";
+import { log } from "./providers/log";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const myGitParentDir = resolveRoot.find();
@@ -821,5 +822,6 @@ yargs(hideBin(process.argv))
     },
     merge
   )
+  .command("log", "View commit history", (yargs) => {}, log)
   .demandCommand(1, "You must provide a valid command")
   .parse();
