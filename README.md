@@ -8,13 +8,13 @@ This project implements a distributed source control system in the style of Git.
 - **Staging Files**: Add files to the staging area. (`mygit add .`)
 - **Committing Changes**: Commit staged files with _messages_.
 - **Branching**: Create and switch between branches.
-- **Merging**: Merge branches with basic conflict detection (no resolution yet).
+- **Merging**: Merge branches with parallel work into mainline. _Fast-forward_ and _3-way merge_ are intelligently used to merge.
+- **Conflicts marking**: Conflicts are detected during merge and affected region in files are marked with symbols: `<<<<<<<<<<<<<<<<<<<<`, `====================` and `>>>>>>>>>>>>>>>>>>>>`.(conflicts require manual resolution)
 - **File Ignoring**: Specify files to be ignored during commits in `.mygitignore` file. Will look for `.gitignore` file if missing.
+- **Viewing Commit History**: View the commit history with detailed information in a colorized output.
 
   ### Upcoming features
 
-  - **Viewing Commit History**: View the commit history with detailed information.
-  - **Stable 3-way merge**: Handling 3-way merges effectively.
   - **Diffs**: View differences between commits and branches.
   - **Cloning Repositories**: Clone a repository locally, copying the contents of the original repository to a new directory.
 
@@ -90,13 +90,18 @@ Once the project is linked globally, you can use it directly from the command li
 
   This commits the staged changes with the provided commit message.
 
-<!-- - **View commit history**:
+- **View commit history**:
 
   ```bash
   mygit log
   ```
 
-  This displays the commit history, showing commit hashes, messages, and timestamps. -->
+  This displays the commit history, showing commit hashes, messages, and timestamps.
+
+  <figure>
+    <img width=900 src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-commit-hist-screen.png" alt="commit history looge from CLI too called mygit" />
+    <figcaption>Sample output of <code>mygit log</code></figcaption>
+  </figure>
 
 - **Create branches**:
 
@@ -104,7 +109,7 @@ Once the project is linked globally, you can use it directly from the command li
   mygit branch <branch-name>
   ```
 
-  This creates a new branch or switches to an existing one.
+  This creates a new branch.
 
   - **Switch branches**:
 
@@ -112,7 +117,7 @@ Once the project is linked globally, you can use it directly from the command li
   mygit switch <branch-name>
   ```
 
-  This switches to an initially created branch.
+  This switches to a created branch.
 
 - **Merge branches**:
 
