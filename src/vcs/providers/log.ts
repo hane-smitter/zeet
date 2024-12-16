@@ -15,12 +15,27 @@ import {
   MYGIT_REPO,
 } from "../constants";
 import { createScreen } from "../utils/screen";
+import { readFileLines } from "../utils/readFileLines";
 
 export const log = async (argv: ArgumentsCamelCase<{}>) => {
   const myGitParentDir = resolveRoot.find();
+  const branchMappings = await fs.promises
+    .readFile(
+      path.join(
+        myGitParentDir,
+        MYGIT_DIRNAME,
+        MYGIT_BRANCH,
+        `${MYGIT_BRANCH_MAPPER}.json`
+      ),
+      "utf-8"
+    )
+    .then((branchMaps): [string, string][] => {
+      return JSON.parse(branchMaps);
+    });
+  const branchMappingsObj = Object.fromEntries(branchMappings);
 
   /** Checked out branch */
-  const coBranch = await getActiveBranch(myGitParentDir);
+  const coBranch = await getActiveBranch(myGitParentDir, branchMappings);
 
   // If no checked out branch, then `.mygit` repo set up is corrupted/altered
   if (!coBranch) {
@@ -52,6 +67,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     process.exit();
   }
 
+  // Read branch's ACTIVITY containing pointers to REPO to derive commit details
   const commitDetails = [];
   for (let idx = 0; idx < branchHistoryLogs.length; idx++) {
     const versionRepo = branchHistoryLogs[idx];
@@ -78,9 +94,91 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
       message: versionMsg,
     });
   }
-
   // Sort date in descending order
   commitDetails.sort((a, b) => b.created.getTime() - a.created.getTime());
+
+  // Get names of other branches
+  const branchesPath = path.join(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH);
+  const otherBranches = await fs.promises
+    .readdir(branchesPath, {
+      withFileTypes: true,
+    })
+    .then((entries) =>
+      entries
+        .filter(
+          (entry) => entry.isDirectory() && entry.name !== coBranch.computedName
+        )
+        .map((dirEnt) => dirEnt.name)
+    );
+
+  // Read the tip commits of other branches
+  const otherBranchTips: {
+    tipCommit: string;
+    computedName: string;
+    enteredName: string;
+  }[] = [];
+  for (let idx = 0; idx < otherBranches.length; idx++) {
+    const branchName = otherBranches[idx];
+    const branchPath = path.join(
+      myGitParentDir,
+      MYGIT_DIRNAME,
+      MYGIT_BRANCH,
+      branchName
+    );
+    const branchActivityFile = path.join(branchPath, MYGIT_BRANCH_ACTIVITY);
+
+    if (fs.existsSync(branchActivityFile)) {
+      const tipCommit = await readFileLines(branchActivityFile, 1);
+      otherBranchTips.push({
+        tipCommit: tipCommit.trim(),
+        computedName: branchName,
+        enteredName: branchMappingsObj[branchName],
+      });
+    }
+  }
+
+  // Mark other branch pointers on current branch commits
+  // for (let idx = 0; idx < otherBranchTips.length; idx++) {
+  //   const element = otherBranchTips[idx];
+  // }
+  let sharedPointers: {
+    tipCommit: string;
+    computedName: string;
+    enteredName: string;
+  }[] = [];
+  for (let idx = 0; idx < commitDetails.length; idx++) {
+    const commitInfo = commitDetails[idx];
+    // if(commitInfo.commitId){}
+    otherBranchTips.forEach((otherBr) => {
+      if (otherBr.tipCommit === commitInfo.commitId) {
+        sharedPointers.push(otherBr);
+      }
+    });
+  }
+
+  for (let idx = 0; idx < commitDetails.length; idx++) {
+    const commitDetail = commitDetails[idx];
+    let commitToken = commitDetails[idx].commitId;
+    const thisCommitPointers = sharedPointers
+      .filter((commPointer) => commPointer.tipCommit === commitDetail.commitId)
+      .map((groupComm) => groupComm.enteredName);
+
+    // TAGS to color output on terminal screen: {yellow-fg}{bold}...{/bold}{/yellow-fg}
+    const withHead =
+      idx === 0
+        ? `{blue-fg}{bold}HEAD{/bold}{/blue-fg} -> ${coBranch.enteredName}`
+        : "";
+    if (thisCommitPointers.length) {
+      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead}, ${thisCommitPointers.join(
+        ", "
+      )}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
+    } else {
+      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
+    }
+    commitDetails[idx].commitId = commitToken;
+  }
+
+  console.log({ commitDetails });
 
   const { addMsg } = createScreen();
   //   addMsg("YOUR COMMITS \n\n");
@@ -100,7 +198,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
       history.created
     );
 
-    const logOutput = `Commit: {yellow-fg}{bold}${history.commitId}{/bold}{/yellow-fg}
+    const logOutput = `Commit: ${history.commitId}
 Date: {blue-fg}${commitDate}{/blue-fg}
 \t${history.message}`;
 
@@ -111,25 +209,15 @@ Date: {blue-fg}${commitDate}{/blue-fg}
   // Log activity file of this branch
 };
 
-async function getActiveBranch(projectRoot: string) {
+async function getActiveBranch(
+  projectRoot: string,
+  branchMappings: [string, string][]
+) {
   try {
     const branchInfo: { computedName: string; enteredName: string } = {
       computedName: "",
       enteredName: "",
     };
-    const branchMappings = await fs.promises
-      .readFile(
-        path.join(
-          projectRoot,
-          MYGIT_DIRNAME,
-          MYGIT_BRANCH,
-          `${MYGIT_BRANCH_MAPPER}.json`
-        ),
-        "utf-8"
-      )
-      .then((branchMaps): [string, string][] => {
-        return JSON.parse(branchMaps);
-      });
     const branchMappingsObj = Object.fromEntries(branchMappings);
     let sysNamedBranch: string | undefined;
 
