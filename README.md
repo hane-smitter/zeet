@@ -99,7 +99,7 @@ Once the project is linked globally, you can use it directly from the command li
   This displays the commit history, showing commit hashes, messages, and timestamps.
 
   <figure>
-    <img width=900 src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-commit-hist-screen.png" alt="commit history looge from CLI too called mygit" />
+    <img width=900 src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-commit-hist2.jpg" alt="commit history looge from CLI too called mygit" />
     <figcaption>Sample output of <code>mygit log</code></figcaption>
   </figure>
 

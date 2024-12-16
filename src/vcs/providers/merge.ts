@@ -350,9 +350,9 @@ export const merge = async (
           preferNewerChanges: false,
           preserveConflicts: true,
           conflictMarkers: {
-            start: `<<<<<<<<<<<<<<<<<<<< (${branchMappingsObj[mergeBranch1]})`,
-            separator: "====================",
-            end: `>>>>>>>>>>>>>>>>>>>> (${branchMappingsObj[mergeBranch2]})`,
+            start: `<<<<<<< (${branchMappingsObj[mergeBranch1]})`,
+            separator: "=======",
+            end: `>>>>>>> (${branchMappingsObj[mergeBranch2]})`,
           },
         }
       );

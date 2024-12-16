@@ -166,19 +166,20 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     // TAGS to color output on terminal screen: {yellow-fg}{bold}...{/bold}{/yellow-fg}
     const withHead =
       idx === 0
-        ? `{blue-fg}{bold}HEAD{/bold}{/blue-fg} -> ${coBranch.enteredName}`
+        ? `{blue-fg}{bold}HEAD{/bold}{/blue-fg} -> ${coBranch.enteredName}, `
         : "";
     if (thisCommitPointers.length) {
-      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead}, ${thisCommitPointers.join(
+      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead}${thisCommitPointers.join(
         ", "
       )}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
     } else {
-      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
+      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead.replace(
+        /,\s+?/,
+        ""
+      )}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
     }
     commitDetails[idx].commitId = commitToken;
   }
-
-  console.log({ commitDetails });
 
   const { addMsg } = createScreen();
   //   addMsg("YOUR COMMITS \n\n");
@@ -204,9 +205,6 @@ Date: {blue-fg}${commitDate}{/blue-fg}
 
     addMsg(logOutput);
   }
-  //   console.log(commitDetails);
-  // Get active branch
-  // Log activity file of this branch
 };
 
 async function getActiveBranch(
