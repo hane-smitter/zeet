@@ -10,6 +10,7 @@ import {
   MYGIT_STAGING,
 } from "../constants";
 import resolveRoot from "./resolveRoot";
+import { prependDataInFile } from "./prependDataInFile";
 
 export function commitCloseRoutine(new_V_DirName: string) {
   const myGitParentDir = resolveRoot.find();
@@ -39,27 +40,17 @@ export function commitCloseRoutine(new_V_DirName: string) {
     updatedHead,
     { encoding: "utf-8" }
   );
-  // After versioning, update a branch's `ACTIVITY` with the `new_V_DirName`
-  // Reading file belonging to a branch that stores pointers
-  const existingPointers = fs.readFileSync(
-    path.resolve(
+
+  // After versioning, update a branch's `ACTIVITY` with the `new_V_DirName`.
+  // Reading file belonging to a branch that stores pointers. Add `new_V_DirName` to the top.
+  prependDataInFile(
+    path.join(
       myGitParentDir,
       MYGIT_DIRNAME,
       MYGIT_BRANCH,
       currentActiveBranch,
       MYGIT_BRANCH_ACTIVITY
     ),
-    "utf-8"
-  );
-  const updatedPointers = new_V_DirName + "\n" + existingPointers;
-  fs.writeFileSync(
-    path.resolve(
-      myGitParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_BRANCH,
-      currentActiveBranch,
-      MYGIT_BRANCH_ACTIVITY
-    ),
-    updatedPointers
+    new_V_DirName
   );
 }

@@ -9,7 +9,7 @@ This project implements a distributed source control system in the style of Git.
 - **Committing Changes**: Commit staged files with _messages_.
 - **Branching**: Create and switch between branches.
 - **Merging**: Merge branches with parallel work into mainline. _Fast-forward_ and _3-way merge_ are intelligently used to merge.
-- **Conflicts marking**: Conflicts are detected during merge and affected region in files are marked with symbols: `<<<<<<<<<<<<<<<<<<<<`, `====================` and `>>>>>>>>>>>>>>>>>>>>`.(conflicts require manual resolution)
+- **Conflicts marking**: Conflicts are detected during merge and affected region in files are marked with symbols: `<<<<<<<`, `=======` and `>>>>>>>`.(conflicts require manual resolution)
 - **File Ignoring**: Specify files to be ignored during commits in `.mygitignore` file. Will look for `.gitignore` file if missing.
 - **Viewing Commit History**: View the commit history with detailed information in a colorized output.
 

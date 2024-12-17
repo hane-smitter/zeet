@@ -173,10 +173,12 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
         ", "
       )}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
     } else {
-      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead.replace(
-        /,\s+?/,
-        ""
-      )}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
+      commitToken = withHead
+        ? `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead.replace(
+            /,\s+?/,
+            ""
+          )}{yellow-fg}{bold}){/bold}{/yellow-fg}`
+        : commitToken;
     }
     commitDetails[idx].commitId = commitToken;
   }
