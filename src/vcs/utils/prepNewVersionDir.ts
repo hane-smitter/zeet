@@ -5,6 +5,7 @@ import { copyDir } from "./copyDir";
 import { MYGIT_DIRNAME, MYGIT_MESSAGE, MYGIT_REPO } from "../constants";
 import { workDirVersionInrepo } from "./workDirVersionInRepo";
 import resolveRoot from "./resolveRoot";
+import { randomBase32String } from "./crumbleText";
 
 /**
  * Handles generation of new version directory; ready to take new changes from _work dir_
@@ -13,12 +14,8 @@ import resolveRoot from "./resolveRoot";
  */
 export async function prepNewVersionDir(mygitMsg: string, copySrc?: string) {
   const myGitParentDir = resolveRoot.find();
-  const new_V_DirName =
-    Math.trunc(Math.random() * 1000000)
-      .toString(32)
-      .toUpperCase() +
-    "_" +
-    Date.now().toString();
+
+  const new_V_DirName = randomBase32String() + "T" + Date.now().toString();
   const repoBase = path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO);
   const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // Location for version snapshot
   const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message

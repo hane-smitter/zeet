@@ -178,7 +178,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
             /,\s+?/,
             ""
           )}{yellow-fg}{bold}){/bold}{/yellow-fg}`
-        : commitToken;
+        : `{yellow-fg}{bold}${commitToken}{/bold}{/yellow-fg}`;
     }
     commitDetails[idx].commitId = commitToken;
   }
