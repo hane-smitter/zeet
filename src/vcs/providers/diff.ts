@@ -4,24 +4,30 @@ import type { ArgumentsCamelCase } from "yargs";
 import * as Diff from "diff";
 
 import resolveRoot from "../utils/resolveRoot";
-import { MYGIT_BRANCH, MYGIT_BRANCH_MAPPER, MYGIT_DIRNAME } from "../constants";
+import {
+  MYGIT_BRANCH,
+  MYGIT_BRANCH_MAPPER,
+  MYGIT_DIRNAME,
+  MYGIT_REPO,
+} from "../constants";
 import { styleText } from "node:util";
 import { workDirVersionInrepo } from "../utils/workDirVersionInRepo";
 import { getFilePathsUnderDir } from "../utils";
+import { validCommitPattern } from "../utils/regexPatterns";
 
 export const diff = async (
   argv: ArgumentsCamelCase<{ fileOrVersion?: string }>
 ) => {
   const myGitParentDir = resolveRoot.find();
   const { fileOrVersion } = argv;
-  let diffPath = fileOrVersion || "";
-  diffPath = diffPath.trim();
+  let diffTarget = fileOrVersion || "";
+  diffTarget = diffTarget.trim();
 
   // 1. If `fileOrVersion` is not given diff the workdir with the previous version
   // 2. Identify structure of a version/commit id
   // 3. If `fileOrVersion` is not a 'version/commit id', is it a branch? And if it is, use tip of the branch to compare with work Dir.
 
-  if (!diffPath) {
+  if (!diffTarget) {
     const mostRecentVersion = await workDirVersionInrepo();
     const repoVersionPath = path.join(mostRecentVersion, "store");
     const workDirPath = myGitParentDir;
@@ -35,47 +41,56 @@ export const diff = async (
       const repoFilePath = path.join(repoVersionPath, filePath);
       const wdFilePath = path.join(workDirPath, filePath);
 
-      let wdFilePathContents: string = "";
-      try {
-        wdFilePathContents = await fs.promises.readFile(wdFilePath, "utf-8");
-      } catch (error) {
-        if (error instanceof Error && (error as NodeJS.ErrnoException).code) {
-          const fsErr = error as NodeJS.ErrnoException;
+      const modelledPatch = await generateDiff({
+        oldFilePath: repoFilePath,
+        newFilePath: wdFilePath,
+        oldFileName: filePath,
+        newFileName: filePath,
+      });
 
-          if (fsErr.code === "ENOENT") {
-            wdFilePathContents = "";
-          }
-        }
-      }
-      let repoFilePathContents: string = "";
-      try {
-        repoFilePathContents = await fs.promises.readFile(
-          repoFilePath,
-          "utf-8"
-        );
-      } catch (error) {
-        if (error instanceof Error && (error as NodeJS.ErrnoException).code) {
-          const fsErr = error as NodeJS.ErrnoException;
-
-          if (fsErr.code === "ENOENT") {
-            repoFilePathContents = "";
-          }
-        }
-      }
-
-      const patchDiff = Diff.structuredPatch(
-        `${filePath}`,
-        `${filePath}`,
-        repoFilePathContents,
-        wdFilePathContents
-      );
-
-      const mouldedPatch = colorizeAndStringifyPatch(patchDiff);
-
-      // Log changes on the console
-      if (mouldedPatch) console.log(mouldedPatch);
+      // Log changes(if any) on the console
+      if (modelledPatch) console.log(modelledPatch);
     }
-  } else if (isCommitId(diffPath)) {
+  }
+  // `diffTarget` is a commit
+  else if (isCommitId(diffTarget)) {
+    // Handle case for a merge commit
+    const commitId = diffTarget.split("&")[0];
+
+    const versionPath = path.join(
+      myGitParentDir,
+      MYGIT_DIRNAME,
+      MYGIT_REPO,
+      commitId
+    );
+    const versionStore = path.join(versionPath, "store");
+    const workDirPath = myGitParentDir;
+    // Continue only if `commitId` exists in `.mygit` REPO
+    if (!fs.existsSync(versionPath)) {
+      console.error(`This revision: ${commitId} is not known`);
+      process.exit(1);
+    }
+
+    const versionStoreFiles = await getFilePathsUnderDir(
+      undefined,
+      versionStore
+    );
+
+    for (let idx = 0; idx < versionStoreFiles.length; idx++) {
+      const filePath = versionStoreFiles[idx];
+
+      const modelledPatch = await generateDiff({
+        oldFilePath: path.join(versionStore, filePath),
+        newFilePath: path.join(workDirPath, filePath),
+        newFileName: filePath,
+        oldFileName: filePath,
+      });
+
+      if (modelledPatch) console.log(modelledPatch);
+    }
+  }
+  // `diffTarget` is a file on work dir
+  else if (fs.existsSync(diffTarget)) {
   } else {
     const branchMapsFilePath = path.resolve(
       myGitParentDir,
@@ -90,27 +105,88 @@ export const diff = async (
     const branchMappingsObj = Object.fromEntries(branchMappings);
 
     const branch = branchMappings.find(
-      (branchMap) => branchMap[1] === diffPath
+      (branchMap) => branchMap[1] === diffTarget
     );
     if (!branch) {
       console.error(`${styleText(
         "red",
-        "Argument: " + diffPath + " is unknown"
+        "Argument: " + diffTarget + " is unknown"
       )}.
-You provided an argument that could not be a revision or a file path under this repo.
-You can find a revision using 'mygit log or a branch using 'mygit branch'. Or specify a file that exists under this repository`);
+The argument could not be a revision or a file path under this repo.
+Find a valid revision using 'mygit log or a branch using 'mygit branch'. Or a file under this repository`);
       process.exit(1);
     }
   }
 };
 
 function isCommitId(id: string) {
-  const versIdRegex = /^[A-Z2-7]{8}T[0-9]+$/;
+  const versionComplex = id.split("&");
 
-  return versIdRegex.test(id);
+  const isValidId = versionComplex.every((version) => {
+    return validCommitPattern.test(version);
+  });
+
+  return isValidId;
 }
 
-function colorizeAndStringifyPatch(patchDiff: Diff.ParsedDiff): string | null {
+async function generateDiff({
+  oldFilePath,
+  newFilePath,
+  oldFileName = "File 1",
+  newFileName = "File 2",
+}: {
+  oldFilePath: string;
+  newFilePath: string;
+  oldFileName?: string;
+  newFileName?: string;
+}): Promise<string | null> {
+  let oldFilePathContents: string = "";
+  try {
+    oldFilePathContents = await fs.promises.readFile(oldFilePath, "utf-8");
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code) {
+      const fsErr = error as NodeJS.ErrnoException;
+
+      if (fsErr.code === "ENOENT") {
+        oldFilePathContents = "";
+      }
+    }
+  }
+
+  let newFilePathContents: string = "";
+  try {
+    newFilePathContents = await fs.promises.readFile(newFilePath, "utf-8");
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code) {
+      const fsErr = error as NodeJS.ErrnoException;
+
+      if (fsErr.code === "ENOENT") {
+        newFilePathContents = "";
+      }
+    }
+  }
+
+  const fileDeleted =
+    oldFilePathContents.length > 0 && newFilePathContents.length <= 0;
+
+  const patchDiff = Diff.structuredPatch(
+    oldFileName,
+    newFileName,
+    oldFilePathContents,
+    newFilePathContents
+  );
+
+  const modelledPatch = colorizeAndStringifyPatch(patchDiff, {
+    fileDeleted,
+  });
+
+  return modelledPatch;
+}
+
+function colorizeAndStringifyPatch(
+  patchDiff: Diff.ParsedDiff,
+  opt: { fileDeleted?: boolean } = {}
+): string | null {
   // Check if there are any hunks with changes
   const hasChanges = patchDiff.hunks.some((hunk) =>
     hunk.lines.some((line) => line.startsWith("+") || line.startsWith("-"))
@@ -127,7 +203,10 @@ function colorizeAndStringifyPatch(patchDiff: Diff.ParsedDiff): string | null {
     `diff --mygit a/${patchDiff.oldFileName} b/${patchDiff.newFileName}\n`
   );
   patchString += styleText("bold", `--- a/${patchDiff.oldFileName}\n`);
-  patchString += styleText("bold", `+++ b/${patchDiff.newFileName}\n`);
+  patchString += styleText(
+    "bold",
+    `+++ ${opt.fileDeleted ? "/dev/null" : "b/" + patchDiff.newFileName}\n`
+  );
 
   patchDiff.hunks.sort((a, b) => a.oldStart - b.oldStart);
   // Add each hunk

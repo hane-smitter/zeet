@@ -41,10 +41,8 @@ export async function workDirVersionInrepo(raw?: boolean) {
 
   if (!raw) {
     // If merge commit, remove parent commits identifiers
-    nowVersion = nowVersion.replace(
-      /&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+$/,
-      ""
-    );
+    const commitParts = nowVersion.split("&");
+    nowVersion = commitParts[0];
   }
   // if `nowVersion` read from `head` is not available, then we get latest version store from `REPO`
   let selectedVersionDir: string;
