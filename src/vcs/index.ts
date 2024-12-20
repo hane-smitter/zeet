@@ -21,7 +21,6 @@ import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
 import { copyDir } from "./utils/copyDir";
 import resolveRoot from "./utils/resolveRoot";
 import { randomUUID } from "node:crypto";
-import { isFilePathUnderDir } from "./utils/isFilePathUnderDir";
 import { synchronizeDestWithSrc } from "./utils/synchronizeDestWithSrc";
 import { merge } from "./providers/merge";
 import { prepNewVersionDir } from "./utils/prepNewVersionDir";
@@ -214,6 +213,18 @@ yargs(hideBin(process.argv))
         } else {
           const decoratedFilePaths = await Promise.all(
             files.map(async (filePath) => {
+              let fileToStage = path.isAbsolute(filePath)
+                ? filePath
+                : path.join(process.cwd(), filePath); // will correctly handle paths like '../../file'
+              if (!fileToStage.includes(myGitParentDir)) {
+                console.error(
+                  `IKO SHIDA! Path: '${fileToStage}' is outside repository at '${myGitParentDir}'`
+                );
+                process.exit(1);
+              }
+              // Convert path to relative
+              filePath = path.relative(myGitParentDir, filePath);
+
               let shouldStage = "";
               try {
                 shouldStage = await shouldStageFile(filePath);
@@ -781,10 +792,7 @@ yargs(hideBin(process.argv))
             myGitParentDir,
             MYGIT_DIRNAME,
             MYGIT_REPO,
-            branchLatestSnapshot.replace(
-              /&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+&[a-zA-Z0-9_]+$/,
-              ""
-            ),
+            branchLatestSnapshot.split("&")[0],
             "store"
           );
 

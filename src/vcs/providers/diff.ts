@@ -28,6 +28,7 @@ export const diff = async (
   // 1. If `fileOrVersion` is not given diff the workdir with the previous version
   // 2. Identify structure of a version/commit id
   // 3. If `fileOrVersion` is not a 'version/commit id', is it a branch? And if it is, use tip of the branch to compare with work Dir.
+  // 4. Is `fileOrVersion` a file path? Compare the file with file from previous version stored at the same path.
 
   if (!diffTarget) {
     const mostRecentVersion = await workDirVersionInrepo();
@@ -101,7 +102,7 @@ export const diff = async (
   ) {
     let filePath = path.isAbsolute(diffTarget)
       ? diffTarget
-      : path.join(process.cwd(), diffTarget);
+      : path.join(process.cwd(), diffTarget); // will correctly handle paths like '../../file'
     if (!filePath.includes(myGitParentDir)) {
       console.error(
         `IKO SHIDA! Path: '${filePath}' is outside repository at '${myGitParentDir}'`
@@ -110,7 +111,7 @@ export const diff = async (
     }
 
     // Convert path to relative
-    filePath = path.relative(myGitParentDir, diffTarget);
+    filePath = path.relative(myGitParentDir, filePath);
 
     const mostRecentVersion = await workDirVersionInrepo();
     const repoVersionPath = path.join(mostRecentVersion, "store");
@@ -162,7 +163,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
       (commit) => commit.split("&")[0]
     );
     if (!branchLatestComm) {
-      console.log("Branch has no commits made");
+      console.error("Branch: " + branch[1] + " has no commits made");
       process.exit(1);
     }
 
@@ -220,7 +221,7 @@ async function generateDiff({
   newFilePath: string;
   oldFileName?: string;
   newFileName?: string;
-}): Promise<string | null> {
+}): Promise<string | undefined> {
   let oldFilePathContents: string = "";
   try {
     oldFilePathContents = await fs.promises.readFile(oldFilePath, "utf-8");
@@ -267,7 +268,7 @@ async function generateDiff({
 function colorizeAndStringifyPatch(
   patchDiff: Diff.ParsedDiff,
   opt: { fileDeleted?: boolean } = {}
-): string | null {
+): string | undefined {
   // Check if there are any hunks with changes
   const hasChanges = patchDiff.hunks.some((hunk) =>
     hunk.lines.some((line) => line.startsWith("+") || line.startsWith("-"))
@@ -275,7 +276,7 @@ function colorizeAndStringifyPatch(
 
   // If no changes, return null
   if (!hasChanges) {
-    return null;
+    return undefined;
   }
 
   // Start with the header
