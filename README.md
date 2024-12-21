@@ -12,10 +12,10 @@ This project implements a distributed source control system in the style of Git.
 - **Conflicts marking**: Conflicts are detected during merge and affected region in files are marked with symbols: `<<<<<<<`, `=======` and `>>>>>>>`.(conflicts require manual resolution)
 - **File Ignoring**: Specify files to be ignored during commits in `.mygitignore` file. Will look for `.gitignore` file if missing.
 - **Viewing Commit History**: View the commit history with detailed information in a colorized output.
+- **Diffs**: View differences between commits and branches.
 
   ### Upcoming features
 
-  - **Diffs**: View differences between commits and branches.
   - **Cloning Repositories**: Clone a repository locally, copying the contents of the original repository to a new directory.
 
 The project doesn't yet include advanced features like rebasing or conflict resolution beyond detection, but it covers the essential functionalities of version control systems like Git.
@@ -139,13 +139,18 @@ Once the project is linked globally, you can use it directly from the command li
   This merges the specified branch into the current branch, with conflict detection.  
   Currently fast-forward merge is fully supported. 3-way merge works but refinements still needed which is work tracked under progress and will be fully stable soon.
 
-<!-- - **View diffs**:
+- **View diffs**:
 
   ```bash
-  mygit diff <commit-hash1> <commit-hash2>
+  mygit diff <commit-hash>
   ```
 
-  This shows the differences between two commits or branches. -->
+  This shows the differences between working directory and the commit or branch. You can also do diff with a file.
+
+  <figure>
+    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-diff-out.jpg" alt="Diff between commits" />
+    <figcaption>Sample output of <code>mygit diff</code></figcaption>
+  </figure>
 
 - **Ignore files**:
   Create a `.mygitignore` file in your repository root and list the files to be ignored.  
