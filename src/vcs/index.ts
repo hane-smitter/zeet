@@ -27,6 +27,7 @@ import { prepNewVersionDir } from "./utils/prepNewVersionDir";
 import { commitCloseRoutine } from "./utils/commitCloseRoutine";
 import { log } from "./providers/log";
 import { diff } from "./providers/diff";
+import { status } from "./providers/status";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
   const myGitParentDir = resolveRoot.find();
@@ -830,6 +831,12 @@ yargs(hideBin(process.argv))
         });
     },
     merge
+  )
+  .command(
+    "status",
+    "Show file paths that have changes in the working directory when compared with current HEAD commit",
+    (yargs) => {},
+    status
   )
   .command(
     "diff [fileOrVersion]",
