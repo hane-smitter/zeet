@@ -80,7 +80,18 @@ Once the project is linked globally, you can use it directly from the command li
   mygit add .
   ```
 
-  This will intelligently pick files that are modified in your repository, and stage them preparing for commit.
+- **View commit status**:
+
+  ```bash
+  mygit status
+  ```
+
+  Shows files added to staging area and those that are not. Convenient to check files that will go into the next commit.
+
+  <figure>
+    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-status-out.jpg" alt="status of changed files" />
+    <figcaption>Sample output of <code>mygit status</code></figcaption>
+  </figure>
 
 - **Commit changes**:
 
@@ -99,7 +110,7 @@ Once the project is linked globally, you can use it directly from the command li
   This displays the commit history, showing commit hashes, messages, and timestamps.
 
   <figure>
-    <img width=900 src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-commit-hist2.jpg" alt="commit history looge from CLI too called mygit" />
+    <img width=900 src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-commit-hist2.jpg" alt="commit history log from CLI too called mygit" />
     <figcaption>Sample output of <code>mygit log</code></figcaption>
   </figure>
 

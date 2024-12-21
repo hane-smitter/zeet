@@ -2,23 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { styleText } from "node:util";
 import { type ArgumentsCamelCase } from "yargs";
-import * as Diff from "diff";
 
 import resolveRoot from "../utils/resolveRoot";
 import {
   MYGIT_ACTIVE_BRANCH,
   MYGIT_BRANCH,
-  MYGIT_BRANCH_ACTIVITY,
   MYGIT_BRANCH_MAPPER,
   MYGIT_DIRNAME,
-  MYGIT_HEAD,
-  MYGIT_REPO,
   MYGIT_STAGING,
 } from "../constants";
 import { getFilePathsUnderDir, shouldStageFile } from "../utils";
-import { synchronizeDestWithSrc } from "../utils/synchronizeDestWithSrc";
-import { prepNewVersionDir } from "../utils/prepNewVersionDir";
-import { commitCloseRoutine } from "../utils/commitCloseRoutine";
 import { workDirVersionInrepo } from "../utils/workDirVersionInRepo";
 
 export const status = async (argv: ArgumentsCamelCase<{}>) => {
@@ -55,15 +48,6 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
 
   // 3. Merge findings of 'modified' and 'deleted' files into one array
   const allFileChanges = [...indexableFilePaths, ...deletedFiles];
-  // const deletedPaths = [];
-  // const modifiedPaths = [];
-  // const untrackedPaths = [];
-
-  // allFileChanges.forEach((filePath) => {
-  //   if (filePath.startsWith("M")) modifiedPaths.push(filePath.slice(2));
-  //   else if (filePath.startsWith("U")) untrackedPaths.push(filePath.slice(2));
-  //   else if (filePath.startsWith("D")) deletedPaths.push(filePath.slice(2));
-  // });
 
   // 4. Get Files paths added in staging area
   const stagingFiles = (
