@@ -136,8 +136,8 @@ Once the project is linked globally, you can use it directly from the command li
   mygit merge <branch-name>
   ```
 
-  This merges the specified branch into the current branch, with conflict detection.  
-  Currently fast-forward merge is fully supported. 3-way merge works but refinements still needed which is work tracked under progress and will be fully stable soon.
+  This merges `<branch-name>` into the current checked out branch, with conflict detection.  
+  _Fast-forward_ merge strategy is used when history between the branches is linear. _3-way merge_ is used otherwise.
 
 - **View diffs**:
 
@@ -145,12 +145,28 @@ Once the project is linked globally, you can use it directly from the command li
   mygit diff <commit-hash>
   ```
 
-  This shows the differences between working directory and the commit or branch. You can also do diff with a file.
+  This shows the differences between working directory and the commit. In place of `<commit-hash>`, you can also specify branch or path to a file under repository.
 
   <figure>
     <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-diff-out.jpg" alt="Diff between commits" />
     <figcaption>Sample output of <code>mygit diff</code></figcaption>
   </figure>
+
+  Other than diffing with the working directory, you can also diff between 2 commits, branches or files. For example:
+
+  ```bash
+  # Compare changes between commits
+  mygit diff <commit-hash1> <commit-hash2>
+
+  # Compare changes between branches
+  mygit diff <stem> <feature-branch>
+
+  # Compare differences of 'file1' in working directory with 'file1' in 'feature-branch'
+  mygit diff <file1> <feature-branch>
+
+  # Compare changes in files in workdir with the last recent commit
+  mygit diff <file1> <file2>
+  ```
 
 - **Ignore files**:
   Create a `.mygitignore` file in your repository root and list the files to be ignored.  
@@ -176,4 +192,4 @@ Distributed under the _MIT_ License. See `LICENSE` for more information.
 
 ---
 
-### Star✨ the project if you think you've seen some good work👍
+### Star✨ the REPO👍
