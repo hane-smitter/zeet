@@ -839,16 +839,16 @@ yargs(hideBin(process.argv))
     status
   )
   .command(
-    "diff [fileOrVersion]",
+    "diff [fileOrVersion...]",
     "Show changes between commit and work directory",
     (yargs) => {
       return yargs.positional("fileOrVersion", {
-        type: "string",
         describe: "A commit id, or branch or file path",
       });
     },
     diff
   )
+  .array("fileOrVersion")
   .command("log", "View commit history", (yargs) => {}, log)
   .demandCommand(1, "You must provide a valid command")
   .parse();
