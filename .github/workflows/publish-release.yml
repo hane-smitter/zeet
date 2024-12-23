@@ -27,8 +27,8 @@ jobs:
       - name: Install dependencies 📥
         run: npm ci
 
-      - name: Build & Test package 🔧
-        run: npm run build && npm run test
+      - name: Build package 🔧
+        run: npm run build
 
       # The package will be built and tested automatically before a publish
       - name: Publish package to NPM 📦
