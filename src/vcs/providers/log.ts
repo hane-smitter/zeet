@@ -5,6 +5,8 @@ import { type ArgumentsCamelCase } from "yargs";
 
 import resolveRoot from "../utils/resolveRoot";
 import {
+  ANSI_CODES,
+  customTab,
   MYGIT_ACTIVE_BRANCH,
   MYGIT_BRANCH,
   MYGIT_BRANCH_ACTIVITY,
@@ -14,8 +16,8 @@ import {
   MYGIT_MESSAGE,
   MYGIT_REPO,
 } from "../constants";
-import { createScreen } from "../utils/screen";
 import { readFileLines } from "../utils/readFileLines";
+import { TerminalPager } from "../utils/terminalPager";
 
 export const log = async (argv: ArgumentsCamelCase<{}>) => {
   const myGitParentDir = resolveRoot.find();
@@ -156,57 +158,66 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     });
   }
 
+  // Finding shared commits with other branches and colorizing output
   for (let idx = 0; idx < commitDetails.length; idx++) {
     const commitDetail = commitDetails[idx];
     let commitToken = commitDetails[idx].commitId;
+
     const thisCommitPointers = sharedPointers
       .filter((commPointer) => commPointer.tipCommit === commitDetail.commitId)
       .map((groupComm) => groupComm.enteredName);
 
-    // TAGS to color output on terminal screen: {yellow-fg}{bold}...{/bold}{/yellow-fg}
+    // Setting colors to terminal output
     const withHead =
       idx === 0
-        ? `{blue-fg}{bold}HEAD{/bold}{/blue-fg} -> ${coBranch.enteredName}, `
+        ? `${styleText(["blue", "bold"], "HEAD")} ${styleText(
+            "yellow",
+            "->"
+          )} ${coBranch.enteredName}, `
         : "";
+
     if (thisCommitPointers.length) {
-      commitToken = `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead}${thisCommitPointers.join(
-        ", "
-      )}{yellow-fg}{bold}){/bold}{/yellow-fg}`;
+      commitToken =
+        styleText(["yellow", "bold"], `${commitToken} (`) +
+        withHead +
+        thisCommitPointers.join(", ") +
+        styleText(["yellow", "bold"], ")");
     } else {
       commitToken = withHead
-        ? `{yellow-fg}{bold}${commitToken} ({/bold}{/yellow-fg}${withHead.replace(
-            /,\s+?/,
-            ""
-          )}{yellow-fg}{bold}){/bold}{/yellow-fg}`
-        : `{yellow-fg}{bold}${commitToken}{/bold}{/yellow-fg}`;
+        ? styleText(["yellow", "bold"], `${commitToken} (`) +
+          withHead.replace(/,\s+?/, "") +
+          styleText(["yellow", "bold"], ")")
+        : styleText(["yellow", "bold"], commitToken);
     }
     commitDetails[idx].commitId = commitToken;
   }
 
-  const { addMsg } = createScreen();
-  //   addMsg("YOUR COMMITS \n\n");
+  const logPager = new TerminalPager();
+  let logContent = "";
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  };
   for (let idx = 0; idx < commitDetails.length; idx++) {
     const history = commitDetails[idx];
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "short",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-      hour12: false,
-    };
     const commitDate = new Intl.DateTimeFormat("en-KE", options).format(
       history.created
     );
 
     const logOutput = `Commit: ${history.commitId}
-Date: {blue-fg}${commitDate}{/blue-fg}
-\t${history.message}`;
+Date: ${ANSI_CODES.blue}${commitDate}${ANSI_CODES.blueOff}
+${customTab + customTab}${history.message}\n`;
 
-    addMsg(logOutput);
+    logContent += logOutput;
   }
+
+  logPager.viewColoredContent(logContent);
 };
 
 async function getActiveBranch(
