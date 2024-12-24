@@ -148,7 +148,7 @@ Once the project is linked globally, you can use it directly from the command li
   This shows the differences between working directory and the commit. In place of `<commit-hash>`, you can also specify branch or path to a file under repository.
 
   <figure>
-    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-diff-out.jpg" alt="Diff between commits" />
+    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-diff-out2.jpg" alt="Diff between commits" />
     <figcaption>Sample output of <code>mygit diff</code></figcaption>
   </figure>
 
