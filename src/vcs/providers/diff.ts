@@ -16,6 +16,7 @@ import { workDirVersionInrepo } from "../utils/workDirVersionInRepo";
 import { getFilePathsUnderDir } from "../utils";
 import { validCommitPattern } from "../utils/regexPatterns";
 import { readFileLines } from "../utils/readFileLines";
+import { TerminalPager } from "../utils/terminalPager";
 
 export const diff = async (
   argv: ArgumentsCamelCase<{ fileOrVersion?: string[] }>
@@ -25,6 +26,9 @@ export const diff = async (
   const [diffTarget1, diffTarget2] = (argv.fileOrVersion || []).map((t) =>
     t?.trim()
   );
+
+  const termPager = new TerminalPager();
+  let LOG_OUTPUT = "";
 
   if (isCommitId(diffTarget1)) {
     // diffTarget1 is a commit
@@ -74,7 +78,7 @@ export const diff = async (
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     } else if (getBranch(diffTarget2, myGitParentDir)) {
       // diffTarget2 is a branch
@@ -123,7 +127,7 @@ export const diff = async (
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     } else if (
       diffTarget2 &&
@@ -157,16 +161,11 @@ export const diff = async (
         oldFileName: filePath,
       });
 
-      if (modelledPatch) console.log(modelledPatch);
+      if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
     }
     // diffTarget2 has a value but is not a commit, branch or file
     else if (diffTarget2) {
-      console.error(`${styleText(
-        "red",
-        "Argument: " + diffTarget2 + " is unknown"
-      )}.
-The argument is neither a revision nor an existent file path under this repo.
-Find a valid revision using 'mygit log' or use a branch. Or use a valid file path under this repository`);
+      displayError(diffTarget2);
       process.exit(1);
     } else {
       const versionStore2 = myGitParentDir;
@@ -181,7 +180,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     }
   } else if (getBranch(diffTarget1, myGitParentDir)) {
@@ -239,12 +238,16 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
 
       // Continue only if `commitId` exists in `.mygit` REPO
       if (!fs.existsSync(versionPath2)) {
-        console.error(`This revision: ${diffTarget2} is not known`);
+        displayError(diffTarget2);
         process.exit(1);
       }
+      const mergedFileSources = await getFilePathsUnderDir(
+        undefined,
+        versionStore2
+      ).then((files) => [...new Set([...versionStoreFiles1, ...files])]);
 
-      for (let idx = 0; idx < versionStoreFiles1.length; idx++) {
-        const filePath = versionStoreFiles1[idx];
+      for (let idx = 0; idx < mergedFileSources.length; idx++) {
+        const filePath = mergedFileSources[idx];
 
         const modelledPatch = await generateDiff({
           oldFilePath: path.join(versionStore1, filePath),
@@ -253,7 +256,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     } else if (getBranch(diffTarget2, myGitParentDir)) {
       // diffTarget2 is a branch
@@ -292,8 +295,13 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
         process.exit(1);
       }
 
-      for (let idx = 0; idx < versionStoreFiles1.length; idx++) {
-        const filePath = versionStoreFiles1[idx];
+      const mergedFileSources = await getFilePathsUnderDir(
+        undefined,
+        versionStore2
+      ).then((files) => [...new Set([...versionStoreFiles1, ...files])]);
+
+      for (let idx = 0; idx < mergedFileSources.length; idx++) {
+        const filePath = mergedFileSources[idx];
 
         const modelledPatch = await generateDiff({
           oldFilePath: path.join(versionStore1, filePath),
@@ -302,7 +310,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     } else if (
       diffTarget2 &&
@@ -336,16 +344,11 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
         oldFileName: filePath,
       });
 
-      if (modelledPatch) console.log(modelledPatch);
+      if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
     }
     // diffTarget2 has a value but is not a commit, branch or file
     else if (diffTarget2) {
-      console.error(`${styleText(
-        "red",
-        "Argument: " + diffTarget2 + " is unknown."
-      )}
-The argument is neither a revision nor an existent file path under this repo.
-Find a valid revision using 'mygit log' or use a branch. Or use a valid file path under this repository`);
+      displayError(diffTarget2);
       process.exit(1);
     } else {
       const versionStore2 = myGitParentDir;
@@ -360,7 +363,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     }
   } else if (
@@ -412,7 +415,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
         oldFileName: filePath1,
       });
 
-      if (modelledPatch) console.log(modelledPatch);
+      if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
     } else if (getBranch(diffTarget2, myGitParentDir)) {
       // diffTarget2 is a branch
       const branch2 = getBranch(diffTarget2, myGitParentDir);
@@ -457,7 +460,7 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
         oldFileName: filePath1,
       });
 
-      if (modelledPatch) console.log(modelledPatch);
+      if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
     } else if (
       diffTarget2 &&
       fs.existsSync(
@@ -497,15 +500,10 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
           oldFileName: filePath,
         });
 
-        if (modelledPatch) console.log(modelledPatch);
+        if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     } else if (diffTarget2) {
-      console.error(`${styleText(
-        "red",
-        "Argument: " + diffTarget2 + " is unknown"
-      )}.
-The argument is neither a revision nor an existent file path under this repo.
-Find a valid revision using 'mygit log' or use a branch. Or use a valid file path under this repository`);
+      displayError(diffTarget2);
       process.exit(1);
     } else {
       const mostRecentVersion = await workDirVersionInrepo();
@@ -519,15 +517,10 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
         oldFileName: filePath1,
       });
 
-      if (modelledPatch) console.log(modelledPatch);
+      if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
     }
   } else if (diffTarget1) {
-    console.error(`${styleText(
-      "red",
-      "Argument: " + diffTarget1 + " is unknown."
-    )}
-The argument is neither a revision nor an existent file path under this repo.
-Find a valid revision using 'mygit log' or use a branch. Or use a valid file path under this repository`);
+    displayError(diffTarget1);
     process.exit(1);
   }
   // Default action is to Diff the work dir and most recent commit
@@ -535,10 +528,12 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
     const mostRecentVersion = await workDirVersionInrepo();
     const versionStore1 = path.join(mostRecentVersion, "store");
     const versionStore2 = myGitParentDir;
-    const recentCommitFiles = await getFilePathsUnderDir(
-      undefined,
-      versionStore1
-    );
+    const recentCommitFiles = await Promise.all([
+      getFilePathsUnderDir(undefined, versionStore1),
+      getFilePathsUnderDir(undefined, versionStore2),
+    ]).then(([files, filesInWorkDir]) => [
+      ...new Set([...files, ...filesInWorkDir]),
+    ]);
 
     for (let idx = 0; idx < recentCommitFiles.length; idx++) {
       const filePath = recentCommitFiles[idx];
@@ -551,10 +546,20 @@ Find a valid revision using 'mygit log' or use a branch. Or use a valid file pat
       });
 
       // Log changes(if any) on the console
-      if (modelledPatch) console.log(modelledPatch);
+      if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
     }
   }
+
+  LOG_OUTPUT
+    ? termPager.viewContent(LOG_OUTPUT)
+    : console.log("No changes found");
 };
+
+function displayError(term: string) {
+  console.error(`${styleText("red", "Argument: " + term + " is unknown.")}
+The argument is neither a revision nor an existent file path under this repo.
+Use a revision from 'mygit log' or branch from 'mygit branch'. Or a valid file path under this repository`);
+}
 
 function isCommitId(id: string) {
   if (!id) return false;
@@ -629,6 +634,8 @@ async function generateDiff({
     }
   }
 
+  const fileCreated =
+    oldFilePathContents.length <= 0 && newFilePathContents.length > 0;
   const fileDeleted =
     oldFilePathContents.length > 0 && newFilePathContents.length <= 0;
 
@@ -641,6 +648,7 @@ async function generateDiff({
 
   const modelledPatch = colorizeAndStringifyPatch(patchDiff, {
     fileDeleted,
+    fileCreated,
   });
 
   return modelledPatch;
@@ -648,7 +656,7 @@ async function generateDiff({
 
 function colorizeAndStringifyPatch(
   patchDiff: Diff.ParsedDiff,
-  opt: { fileDeleted?: boolean } = {}
+  opt: { fileCreated?: boolean; fileDeleted?: boolean } = {}
 ): string | undefined {
   // Check if there are any hunks with changes
   const hasChanges = patchDiff.hunks.some((hunk) =>
@@ -665,7 +673,11 @@ function colorizeAndStringifyPatch(
     "bold",
     `diff --mygit a/${patchDiff.oldFileName} b/${patchDiff.newFileName}\n`
   );
-  patchString += styleText("bold", `--- a/${patchDiff.oldFileName}\n`);
+  // patchString += styleText("bold", `--- a/${patchDiff.oldFileName}\n`);
+  patchString += styleText(
+    "bold",
+    `--- ${opt.fileCreated ? "/dev/null" : "a/" + patchDiff.oldFileName}\n`
+  );
   patchString += styleText(
     "bold",
     `+++ ${opt.fileDeleted ? "/dev/null" : "b/" + patchDiff.newFileName}\n`
