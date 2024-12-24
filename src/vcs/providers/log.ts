@@ -7,14 +7,14 @@ import resolveRoot from "../utils/resolveRoot";
 import {
   ANSI_CODES,
   customTab,
-  MYGIT_ACTIVE_BRANCH,
-  MYGIT_BRANCH,
-  MYGIT_BRANCH_ACTIVITY,
-  MYGIT_BRANCH_MAPPER,
-  MYGIT_DIRNAME,
-  MYGIT_HEAD,
-  MYGIT_MESSAGE,
-  MYGIT_REPO,
+  ZEET_ACTIVE_BRANCH,
+  ZEET_BRANCH,
+  ZEET_BRANCH_ACTIVITY,
+  ZEET_BRANCH_MAPPER,
+  ZEET_DIRNAME,
+  ZEET_HEAD,
+  ZEET_MESSAGE,
+  ZEET_REPO,
 } from "../constants";
 import { readFileLines } from "../utils/readFileLines";
 import { TerminalPager } from "../utils/terminalPager";
@@ -25,9 +25,9 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     .readFile(
       path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
-        `${MYGIT_BRANCH_MAPPER}.json`
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
+        `${ZEET_BRANCH_MAPPER}.json`
       ),
       "utf-8"
     )
@@ -48,10 +48,10 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
   const { computedName, enteredName } = coBranch;
   const activeBranchActivityPath = path.join(
     zeetParentDir,
-    MYGIT_DIRNAME,
-    MYGIT_BRANCH,
+    ZEET_DIRNAME,
+    ZEET_BRANCH,
     computedName,
-    MYGIT_BRANCH_ACTIVITY
+    ZEET_BRANCH_ACTIVITY
   );
   const branchHistoryLogs = (
     await fs.promises.readFile(activeBranchActivityPath, "utf-8")
@@ -75,8 +75,8 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     const versionRepo = branchHistoryLogs[idx];
     const repoDirPath = path.join(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       versionRepo
     );
 
@@ -85,7 +85,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     // 2. Get version message
     const versionMsg = (
       await fs.promises.readFile(
-        path.join(repoDirPath, "meta", MYGIT_MESSAGE),
+        path.join(repoDirPath, "meta", ZEET_MESSAGE),
         "utf-8"
       )
     ).trim();
@@ -100,7 +100,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
   commitDetails.sort((a, b) => b.created.getTime() - a.created.getTime());
 
   // Get names of other branches
-  const branchesPath = path.join(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH);
+  const branchesPath = path.join(zeetParentDir, ZEET_DIRNAME, ZEET_BRANCH);
   const otherBranches = await fs.promises
     .readdir(branchesPath, {
       withFileTypes: true,
@@ -123,11 +123,11 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
     const branchName = otherBranches[idx];
     const branchPath = path.join(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_BRANCH,
+      ZEET_DIRNAME,
+      ZEET_BRANCH,
       branchName
     );
-    const branchActivityFile = path.join(branchPath, MYGIT_BRANCH_ACTIVITY);
+    const branchActivityFile = path.join(branchPath, ZEET_BRANCH_ACTIVITY);
 
     if (fs.existsSync(branchActivityFile)) {
       const tipCommit = await readFileLines(branchActivityFile, 1);
@@ -233,7 +233,7 @@ async function getActiveBranch(
     let sysNamedBranch: string | undefined;
 
     // 1. Read Head
-    const headFilePath = path.join(projectRoot, MYGIT_DIRNAME, MYGIT_HEAD);
+    const headFilePath = path.join(projectRoot, ZEET_DIRNAME, ZEET_HEAD);
     const headContents = await fs.promises
       .readFile(headFilePath, "utf-8")
       .then((content) => content.split("@"));
@@ -248,9 +248,9 @@ async function getActiveBranch(
     // 2. Read active branch from Branches in `.zeet`
     const activeBranchFile = path.join(
       projectRoot,
-      MYGIT_DIRNAME,
-      MYGIT_BRANCH,
-      MYGIT_ACTIVE_BRANCH
+      ZEET_DIRNAME,
+      ZEET_BRANCH,
+      ZEET_ACTIVE_BRANCH
     );
     const activeBranch = (
       await fs.promises.readFile(activeBranchFile, "utf-8")

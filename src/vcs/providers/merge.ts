@@ -6,13 +6,13 @@ import * as Diff from "diff";
 
 import resolveRoot from "../utils/resolveRoot";
 import {
-  MYGIT_ACTIVE_BRANCH,
-  MYGIT_BRANCH,
-  MYGIT_BRANCH_ACTIVITY,
-  MYGIT_BRANCH_MAPPER,
-  MYGIT_DIRNAME,
-  MYGIT_HEAD,
-  MYGIT_REPO,
+  ZEET_ACTIVE_BRANCH,
+  ZEET_BRANCH,
+  ZEET_BRANCH_ACTIVITY,
+  ZEET_BRANCH_MAPPER,
+  ZEET_DIRNAME,
+  ZEET_HEAD,
+  ZEET_REPO,
 } from "../constants";
 import { getFilePathsUnderDir } from "../utils";
 import { synchronizeDestWithSrc } from "../utils/synchronizeDestWithSrc";
@@ -33,15 +33,15 @@ export const merge = async (
   const zeetParentDir = resolveRoot.find();
   const zeetBranchDir = path.resolve(
     zeetParentDir,
-    MYGIT_DIRNAME,
-    MYGIT_BRANCH
+    ZEET_DIRNAME,
+    ZEET_BRANCH
   );
 
   const branchMapsFilePath = path.resolve(
     zeetParentDir,
-    MYGIT_DIRNAME,
-    MYGIT_BRANCH,
-    `${MYGIT_BRANCH_MAPPER}.json`
+    ZEET_DIRNAME,
+    ZEET_BRANCH,
+    `${ZEET_BRANCH_MAPPER}.json`
   );
   const branchMappings = await fs.promises
     .readFile(branchMapsFilePath, "utf-8")
@@ -66,7 +66,7 @@ export const merge = async (
   /**  Active branch: Currently checked out */
   const mergeBranch1 = (
     await fs.promises.readFile(
-      path.resolve(zeetBranchDir, MYGIT_ACTIVE_BRANCH),
+      path.resolve(zeetBranchDir, ZEET_ACTIVE_BRANCH),
       "utf-8"
     )
   ).split(/\r?\n/)[0];
@@ -75,14 +75,14 @@ export const merge = async (
 
   const branch_1_Activity = (
     await fs.promises.readFile(
-      path.resolve(zeetBranchDir, mergeBranch1, MYGIT_BRANCH_ACTIVITY),
+      path.resolve(zeetBranchDir, mergeBranch1, ZEET_BRANCH_ACTIVITY),
       "utf-8"
     )
   ).split(/\r?\n/);
   const branch_1_ActivitySet = new Set(branch_1_Activity);
   const branch_2_Activity = (
     await fs.promises.readFile(
-      path.resolve(zeetBranchDir, mergeBranch2, MYGIT_BRANCH_ACTIVITY),
+      path.resolve(zeetBranchDir, mergeBranch2, ZEET_BRANCH_ACTIVITY),
       "utf-8"
     )
   ).split(/\r?\n/);
@@ -132,15 +132,15 @@ export const merge = async (
     const brach2Tip = branch_2_Activity[0];
     const branch_1_TipSnapPath = path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       mergeBase,
       "store"
     );
     const branch_2_TipSnapPath = path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       brach2Tip,
       "store"
     );
@@ -195,14 +195,14 @@ export const merge = async (
 
     // Update branch1 activity
     await fs.promises.writeFile(
-      path.resolve(zeetBranchDir, mergeBranch1, MYGIT_BRANCH_ACTIVITY),
+      path.resolve(zeetBranchDir, mergeBranch1, ZEET_BRANCH_ACTIVITY),
       orderedBranch_1_activity.join("\n")
     );
     // Update HEAD
     const headFilePath = path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_HEAD
+      ZEET_DIRNAME,
+      ZEET_HEAD
     );
     const headContent = await fs.promises.readFile(headFilePath, "utf-8");
     const newHeadContent = headContent.replace(
@@ -227,24 +227,24 @@ export const merge = async (
     /**`REPO` 'store' path to the version pointed by 'common ancestor' between 'branch 1' and 'branch 2' */
     const mergeBaseSnapPath = path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       mergeBase,
       "store"
     );
     /**`REPO` 'store' path to the version pointed by tip of' branch 1' */
     const branch_1_TipSnapPath = path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       branch1Tip,
       "store"
     );
     /**`REPO` 'store' path to the version pointed by tip of' branch 2' */
     const branch_2_TipSnapPath = path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       branch2Tip,
       "store"
     );

@@ -6,11 +6,11 @@ import * as Diff from "diff";
 
 import resolveRoot from "../utils/resolveRoot";
 import {
-  MYGIT_BRANCH,
-  MYGIT_BRANCH_ACTIVITY,
-  MYGIT_BRANCH_MAPPER,
-  MYGIT_DIRNAME,
-  MYGIT_REPO,
+  ZEET_BRANCH,
+  ZEET_BRANCH_ACTIVITY,
+  ZEET_BRANCH_MAPPER,
+  ZEET_DIRNAME,
+  ZEET_REPO,
 } from "../constants";
 import { workDirVersionInrepo } from "../utils/workDirVersionInRepo";
 import { getFilePathsUnderDir } from "../utils";
@@ -35,8 +35,8 @@ export const diff = async (
     const commitId1 = diffTarget1.split("&")[0]; // accounts for merge commit structure
     const versionPath1 = path.join(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       commitId1
     );
     const versionStore1 = path.join(versionPath1, "store");
@@ -56,8 +56,8 @@ export const diff = async (
       const commitId2 = diffTarget2.split("&")[0];
       const versionPath2 = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_REPO,
+        ZEET_DIRNAME,
+        ZEET_REPO,
         commitId2
       );
       const versionStore2 = path.join(versionPath2, "store");
@@ -88,10 +88,10 @@ export const diff = async (
       // If branch exists, get the most recent commit from it
       const branchActivityPath = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
         branch2[0],
-        MYGIT_BRANCH_ACTIVITY
+        ZEET_BRANCH_ACTIVITY
       );
 
       const branchLatestComm2 = await readFileLines(branchActivityPath, 1).then(
@@ -104,8 +104,8 @@ export const diff = async (
 
       const versionPath2 = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_REPO,
+        ZEET_DIRNAME,
+        ZEET_REPO,
         branchLatestComm2
       );
       const versionStore2 = path.join(versionPath2, "store");
@@ -192,10 +192,10 @@ export const diff = async (
     // If branch exists, get the most recent commit from it
     const branchActivityPath1 = path.join(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_BRANCH,
+      ZEET_DIRNAME,
+      ZEET_BRANCH,
       branch1[0],
-      MYGIT_BRANCH_ACTIVITY
+      ZEET_BRANCH_ACTIVITY
     );
 
     const branchLatestComm1 = await readFileLines(branchActivityPath1, 1).then(
@@ -209,8 +209,8 @@ export const diff = async (
     const commitId1 = branchLatestComm1;
     const versionPath1 = path.join(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_REPO,
+      ZEET_DIRNAME,
+      ZEET_REPO,
       commitId1
     );
     const versionStore1 = path.join(versionPath1, "store");
@@ -230,8 +230,8 @@ export const diff = async (
       const commitId2 = diffTarget2.split("&")[0];
       const versionPath2 = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_REPO,
+        ZEET_DIRNAME,
+        ZEET_REPO,
         commitId2
       );
       const versionStore2 = path.join(versionPath2, "store");
@@ -266,10 +266,10 @@ export const diff = async (
       // If branch exists, get the most recent commit from it
       const branchActivityPath = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
         branch2[0],
-        MYGIT_BRANCH_ACTIVITY
+        ZEET_BRANCH_ACTIVITY
       );
 
       const branchLatestComm2 = await readFileLines(branchActivityPath, 1).then(
@@ -282,8 +282,8 @@ export const diff = async (
 
       const versionPath2 = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_REPO,
+        ZEET_DIRNAME,
+        ZEET_REPO,
         branchLatestComm2
       );
       const versionStore2 = path.join(versionPath2, "store");
@@ -393,8 +393,8 @@ export const diff = async (
       const commitId2 = diffTarget2.split("&")[0];
       const versionPath2 = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_REPO,
+        ZEET_DIRNAME,
+        ZEET_REPO,
         commitId2
       );
       const versionStore2 = path.join(versionPath2, "store");
@@ -424,10 +424,10 @@ export const diff = async (
       // If branch exists, get the most recent commit from it
       const branchActivityPath = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
         branch2[0],
-        MYGIT_BRANCH_ACTIVITY
+        ZEET_BRANCH_ACTIVITY
       );
 
       const branchLatestComm2 = await readFileLines(branchActivityPath, 1).then(
@@ -440,8 +440,8 @@ export const diff = async (
 
       const versionPath2 = path.join(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_REPO,
+        ZEET_DIRNAME,
+        ZEET_REPO,
         branchLatestComm2
       );
       const versionStore2 = path.join(versionPath2, "store");
@@ -577,9 +577,9 @@ function getBranch(branchName: string, projectRoot: string) {
   if (!branchName) return;
   const branchMapsFilePath = path.resolve(
     projectRoot,
-    MYGIT_DIRNAME,
-    MYGIT_BRANCH,
-    `${MYGIT_BRANCH_MAPPER}.json`
+    ZEET_DIRNAME,
+    ZEET_BRANCH,
+    `${ZEET_BRANCH_MAPPER}.json`
   );
 
   try {

@@ -2,12 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  MYGIT_ACTIVE_BRANCH,
-  MYGIT_BRANCH,
-  MYGIT_BRANCH_ACTIVITY,
-  MYGIT_DIRNAME,
-  MYGIT_HEAD,
-  MYGIT_STAGING,
+  ZEET_ACTIVE_BRANCH,
+  ZEET_BRANCH,
+  ZEET_BRANCH_ACTIVITY,
+  ZEET_DIRNAME,
+  ZEET_HEAD,
+  ZEET_STAGING,
 } from "../constants";
 import resolveRoot from "./resolveRoot";
 import { prependDataInFile } from "./prependDataInFile";
@@ -16,7 +16,7 @@ export function commitCloseRoutine(new_V_DirName: string) {
   const zeetParentDir = resolveRoot.find();
   // After versioning, reset the staging index
   fs.writeFileSync(
-    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+    path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_STAGING),
     "",
     {
       encoding: "utf-8",
@@ -27,16 +27,16 @@ export function commitCloseRoutine(new_V_DirName: string) {
     .readFileSync(
       path.resolve(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
-        MYGIT_ACTIVE_BRANCH
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
+        ZEET_ACTIVE_BRANCH
       ),
       "utf-8"
     )
     .split(/\r?\n/)[0];
   const updatedHead = currentActiveBranch + "@" + new_V_DirName;
   fs.writeFileSync(
-    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
+    path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_HEAD),
     updatedHead,
     { encoding: "utf-8" }
   );
@@ -46,10 +46,10 @@ export function commitCloseRoutine(new_V_DirName: string) {
   prependDataInFile(
     path.join(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_BRANCH,
+      ZEET_DIRNAME,
+      ZEET_BRANCH,
       currentActiveBranch,
-      MYGIT_BRANCH_ACTIVITY
+      ZEET_BRANCH_ACTIVITY
     ),
     new_V_DirName
   );

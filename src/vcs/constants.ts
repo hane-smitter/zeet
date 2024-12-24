@@ -1,15 +1,15 @@
 import { obfuscate } from "./utils/crumbleText";
 
-export const MYGIT_DIRNAME = ".zeet";
-export const MYGIT_STAGING = "STAGING";
-export const MYGIT_REPO = "REPO";
-export const MYGIT_HEAD = "HEAD";
-export const MYGIT_BRANCH = obfuscate("BRANCH");
-export const MYGIT_BRANCH_MAPPER = obfuscate("MAPPER");
-export const MYGIT_ACTIVE_BRANCH = "ACTIVE";
-export const MYGIT_BRANCH_ACTIVITY = "ACTIVITY";
-export const MYGIT_DEFAULT_BRANCH_NAME = "stem";
-export const MYGIT_MESSAGE = "MYGITMSG";
+export const ZEET_DIRNAME = ".zeet";
+export const ZEET_STAGING = "STAGING";
+export const ZEET_REPO = "REPO";
+export const ZEET_HEAD = "HEAD";
+export const ZEET_BRANCH = obfuscate("BRANCH");
+export const ZEET_BRANCH_MAPPER = obfuscate("MAPPER");
+export const ZEET_ACTIVE_BRANCH = "ACTIVE";
+export const ZEET_BRANCH_ACTIVITY = "ACTIVITY";
+export const ZEET_DEFAULT_BRANCH_NAME = "stem";
+export const ZEET_MESSAGE = "MYGITMSG";
 
 
 const COLOR_OFF = "\x1b[39m";

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { copyDir } from "./copyDir";
-import { MYGIT_DIRNAME, MYGIT_MESSAGE, MYGIT_REPO } from "../constants";
+import { ZEET_DIRNAME, ZEET_MESSAGE, ZEET_REPO } from "../constants";
 import { workDirVersionInrepo } from "./workDirVersionInRepo";
 import resolveRoot from "./resolveRoot";
 import { randomBase32String } from "./crumbleText";
@@ -16,7 +16,7 @@ export async function prepNewVersionDir(zeetMsg: string, copySrc?: string) {
   const zeetParentDir = resolveRoot.find();
 
   const new_V_DirName = randomBase32String() + "T" + Date.now().toString();
-  const repoBase = path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO);
+  const repoBase = path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_REPO);
   const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // Location for version snapshot
   const zeetMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message
 
@@ -26,7 +26,7 @@ export async function prepNewVersionDir(zeetMsg: string, copySrc?: string) {
   fs.mkdirSync(zeetMsgBase); // not specifying `recursive`
 
   // Save version message
-  fs.writeFileSync(path.join(zeetMsgBase, MYGIT_MESSAGE), zeetMsg, {
+  fs.writeFileSync(path.join(zeetMsgBase, ZEET_MESSAGE), zeetMsg, {
     encoding: "utf-8",
   });
 

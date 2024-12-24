@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 
-import { MYGIT_DIRNAME } from "../constants";
+import { ZEET_DIRNAME } from "../constants";
 
 export default class resolveRoot {
   static #currentDir = process.cwd();
@@ -16,7 +16,7 @@ export default class resolveRoot {
     }
 
     while (this.#currentDir !== path.parse(this.#currentDir).root) {
-      const zeetPath = path.join(this.#currentDir, MYGIT_DIRNAME);
+      const zeetPath = path.join(this.#currentDir, ZEET_DIRNAME);
 
       if (fs.existsSync(zeetPath)) {
         const zeetParent = this.#currentDir;

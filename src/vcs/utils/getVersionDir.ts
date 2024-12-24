@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { MYGIT_DIRNAME, MYGIT_REPO } from "../constants";
+import { ZEET_DIRNAME, ZEET_REPO } from "../constants";
 import resolveRoot from "./resolveRoot";
 
 /**
@@ -17,7 +17,7 @@ export async function getVersionDir(
 ) {
   const zeetParentDir = resolveRoot.find();
   const targetDir =
-    dirPath || path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO);
+    dirPath || path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_REPO);
   // Read the contents of the directory
   const items = await fs.promises.readdir(targetDir, { withFileTypes: true });
 

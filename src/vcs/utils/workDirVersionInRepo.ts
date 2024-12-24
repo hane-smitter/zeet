@@ -2,12 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  MYGIT_ACTIVE_BRANCH,
-  MYGIT_BRANCH,
-  MYGIT_BRANCH_ACTIVITY,
-  MYGIT_DIRNAME,
-  MYGIT_HEAD,
-  MYGIT_REPO,
+  ZEET_ACTIVE_BRANCH,
+  ZEET_BRANCH,
+  ZEET_BRANCH_ACTIVITY,
+  ZEET_DIRNAME,
+  ZEET_HEAD,
+  ZEET_REPO,
 } from "../constants";
 // import { getVersionDir } from "./getVersionDir";
 import resolveRoot from "./resolveRoot";
@@ -25,12 +25,12 @@ import resolveRoot from "./resolveRoot";
  */
 export async function workDirVersionInrepo(raw?: boolean) {
   const zeetParentDir = resolveRoot.find();
-  const repoDir = path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO);
+  const repoDir = path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_REPO);
 
   const zeetVersionTracker = path.resolve(
     zeetParentDir,
-    MYGIT_DIRNAME,
-    MYGIT_HEAD
+    ZEET_DIRNAME,
+    ZEET_HEAD
   );
   // `zeetVersionTracker` should be a file with a single entry
   //  We are `split`ting by newline `\n` character just to ensure we get first only string(incase there's more)
@@ -55,9 +55,9 @@ export async function workDirVersionInrepo(raw?: boolean) {
   const activeBranch = await fs.promises.readFile(
     path.resolve(
       zeetParentDir,
-      MYGIT_DIRNAME,
-      MYGIT_BRANCH,
-      MYGIT_ACTIVE_BRANCH
+      ZEET_DIRNAME,
+      ZEET_BRANCH,
+      ZEET_ACTIVE_BRANCH
     ),
     "utf-8"
   );
@@ -65,10 +65,10 @@ export async function workDirVersionInrepo(raw?: boolean) {
     await fs.promises.readFile(
       path.resolve(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
         activeBranch,
-        MYGIT_BRANCH_ACTIVITY
+        ZEET_BRANCH_ACTIVITY
       ),
       "utf-8"
     )

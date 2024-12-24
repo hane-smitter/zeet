@@ -5,11 +5,11 @@ import { type ArgumentsCamelCase } from "yargs";
 
 import resolveRoot from "../utils/resolveRoot";
 import {
-  MYGIT_ACTIVE_BRANCH,
-  MYGIT_BRANCH,
-  MYGIT_BRANCH_MAPPER,
-  MYGIT_DIRNAME,
-  MYGIT_STAGING,
+  ZEET_ACTIVE_BRANCH,
+  ZEET_BRANCH,
+  ZEET_BRANCH_MAPPER,
+  ZEET_DIRNAME,
+  ZEET_STAGING,
 } from "../constants";
 import { getFilePathsUnderDir, shouldStageFile } from "../utils";
 import { workDirVersionInrepo } from "../utils/workDirVersionInRepo";
@@ -52,7 +52,7 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
   // 4. Get Files paths added in staging area
   const stagingFiles = (
     await fs.promises.readFile(
-      path.join(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+      path.join(zeetParentDir, ZEET_DIRNAME, ZEET_STAGING),
       "utf-8"
     )
   )
@@ -72,15 +72,15 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
   // 6.1 Log checked out branch
   const activeBranchFilePath = path.resolve(
     zeetParentDir,
-    MYGIT_DIRNAME,
-    MYGIT_BRANCH,
-    MYGIT_ACTIVE_BRANCH
+    ZEET_DIRNAME,
+    ZEET_BRANCH,
+    ZEET_ACTIVE_BRANCH
   );
   const branchMapsFilePath = path.resolve(
     zeetParentDir,
-    MYGIT_DIRNAME,
-    MYGIT_BRANCH,
-    `${MYGIT_BRANCH_MAPPER}.json`
+    ZEET_DIRNAME,
+    ZEET_BRANCH,
+    `${ZEET_BRANCH_MAPPER}.json`
   );
 
   const activeBranch = (

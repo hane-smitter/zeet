@@ -6,15 +6,15 @@ import yargs, { type ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import {
-  MYGIT_BRANCH,
-  MYGIT_DEFAULT_BRANCH_NAME,
-  MYGIT_BRANCH_ACTIVITY,
-  MYGIT_DIRNAME,
-  MYGIT_HEAD,
-  MYGIT_REPO,
-  MYGIT_STAGING,
-  MYGIT_ACTIVE_BRANCH,
-  MYGIT_BRANCH_MAPPER,
+  ZEET_BRANCH,
+  ZEET_DEFAULT_BRANCH_NAME,
+  ZEET_BRANCH_ACTIVITY,
+  ZEET_DIRNAME,
+  ZEET_HEAD,
+  ZEET_REPO,
+  ZEET_STAGING,
+  ZEET_ACTIVE_BRANCH,
+  ZEET_BRANCH_MAPPER,
 } from "./constants";
 import { getFilePathsUnderDir, shouldStageFile } from "./utils";
 import { workDirVersionInrepo } from "./utils/workDirVersionInRepo";
@@ -32,18 +32,18 @@ import { status } from "./providers/status";
 function confirmRepo(argv: ArgumentsCamelCase) {
   const zeetParentDir = resolveRoot.find();
 
-  const dirExists = fs.existsSync(path.resolve(zeetParentDir, MYGIT_DIRNAME));
+  const dirExists = fs.existsSync(path.resolve(zeetParentDir, ZEET_DIRNAME));
   const STAGINGExists = fs.existsSync(
-    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING)
+    path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_STAGING)
   );
   const HEADExists = fs.existsSync(
-    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_HEAD)
+    path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_HEAD)
   );
   const REPOExists = fs.existsSync(
-    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO)
+    path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_REPO)
   );
   const BRANCHExists = fs.existsSync(
-    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH)
+    path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_BRANCH)
   );
 
   const skippedCommands = ["init"];
@@ -82,7 +82,7 @@ yargs(hideBin(process.argv))
     "Initialize zeet repository",
     (yargs) => {},
     async (argv) => {
-      const zeetDirPath = path.resolve(MYGIT_DIRNAME);
+      const zeetDirPath = path.resolve(ZEET_DIRNAME);
       try {
         // Check if directory already exists
         let dirExists: boolean = fs.existsSync(zeetDirPath);
@@ -96,21 +96,21 @@ yargs(hideBin(process.argv))
         // 1. Create `.zeet` directory
         fs.mkdirSync(zeetDirPath, { recursive: true });
         // 2. Create REPO dir
-        const repoPath = path.resolve(zeetDirPath, MYGIT_REPO);
+        const repoPath = path.resolve(zeetDirPath, ZEET_REPO);
         fs.mkdirSync(repoPath);
 
         // 3.  Create BRANCH dir & Create Default BRANCH dir
         const defaultBranchName = randomUUID();
         const defBranchPath = path.resolve(
           zeetDirPath,
-          MYGIT_BRANCH,
+          ZEET_BRANCH,
           defaultBranchName
         );
         fs.mkdirSync(defBranchPath, { recursive: true });
         // 4. Create ACTIVITY file that will include a branch's POINTERs
         const branchActivityFile = path.resolve(
           defBranchPath,
-          MYGIT_BRANCH_ACTIVITY
+          ZEET_BRANCH_ACTIVITY
         );
         fs.writeFileSync(branchActivityFile, "", {
           encoding: "utf-8",
@@ -119,8 +119,8 @@ yargs(hideBin(process.argv))
         // Meaning it will be the default active branch
         const activeBranchFile = path.resolve(
           zeetDirPath,
-          MYGIT_BRANCH,
-          MYGIT_ACTIVE_BRANCH
+          ZEET_BRANCH,
+          ZEET_ACTIVE_BRANCH
         );
         fs.writeFileSync(activeBranchFile, defaultBranchName, {
           encoding: "utf-8",
@@ -128,19 +128,19 @@ yargs(hideBin(process.argv))
         // 6. Create branch MAPPER.json
         const mapperFile = path.resolve(
           zeetDirPath,
-          MYGIT_BRANCH,
-          `${MYGIT_BRANCH_MAPPER}.json`
+          ZEET_BRANCH,
+          `${ZEET_BRANCH_MAPPER}.json`
         );
-        const mapperContents = [[defaultBranchName, MYGIT_DEFAULT_BRANCH_NAME]];
+        const mapperContents = [[defaultBranchName, ZEET_DEFAULT_BRANCH_NAME]];
         fs.writeFileSync(mapperFile, JSON.stringify(mapperContents), {
           encoding: "utf-8",
         });
 
         // 7. Create staging file inside `.zeet` directory
-        const stgFile = path.resolve(zeetDirPath, MYGIT_STAGING);
+        const stgFile = path.resolve(zeetDirPath, ZEET_STAGING);
         fs.writeFileSync(stgFile, "", { encoding: "utf-8" });
         // 8. Create Head file inside `.zeet` directory
-        const headFile = path.resolve(zeetDirPath, MYGIT_HEAD);
+        const headFile = path.resolve(zeetDirPath, ZEET_HEAD);
         fs.writeFileSync(headFile, "", { encoding: "utf-8" });
 
         // await Promise.all(initializationArr);
@@ -150,7 +150,7 @@ yargs(hideBin(process.argv))
 
         console.log("Initialized MyGit repository");
       } catch (error) {
-        console.error(`Error initializing ${MYGIT_DIRNAME} directory: `, error);
+        console.error(`Error initializing ${ZEET_DIRNAME} directory: `, error);
       }
     }
   )
@@ -288,8 +288,8 @@ yargs(hideBin(process.argv))
         try {
           const stgIndexPath = path.resolve(
             zeetParentDir,
-            MYGIT_DIRNAME,
-            MYGIT_STAGING
+            ZEET_DIRNAME,
+            ZEET_STAGING
           );
           let stgNewContent = "";
           for (let i = 0; i < fileExistenceInfo.length; i++) {
@@ -383,7 +383,7 @@ yargs(hideBin(process.argv))
       // Read all paths in `.zeet/STAGING`(staged files)
       try {
         const stagedPaths = fs.readFileSync(
-          path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+          path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_STAGING),
           "utf-8"
         );
         const dedupedPaths = [...new Set(stagedPaths.split(/\r?\n/))].filter(
@@ -497,24 +497,24 @@ yargs(hideBin(process.argv))
       const nowSnapshotFullPath = await workDirVersionInrepo();
       const nowSnapshotTkn = nowSnapshotFullPath
         ? path.relative(
-            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO),
+            path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_REPO),
             nowSnapshotFullPath
           )
         : "";
       const checkedOutBranch = await fs.promises.readFile(
         path.resolve(
           zeetParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_BRANCH,
-          MYGIT_ACTIVE_BRANCH
+          ZEET_DIRNAME,
+          ZEET_BRANCH,
+          ZEET_ACTIVE_BRANCH
         ),
         "utf-8"
       );
       const branchMapsFilePath = path.resolve(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
-        `${MYGIT_BRANCH_MAPPER}.json`
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
+        `${ZEET_BRANCH_MAPPER}.json`
       );
 
       // 1. Create branch
@@ -530,8 +530,8 @@ yargs(hideBin(process.argv))
         try {
           const zeetBranchDir = path.resolve(
             zeetParentDir,
-            MYGIT_DIRNAME,
-            MYGIT_BRANCH
+            ZEET_DIRNAME,
+            ZEET_BRANCH
           );
 
           const branchMappings = await fs.promises
@@ -566,7 +566,7 @@ yargs(hideBin(process.argv))
           await fs.promises.mkdir(path.resolve(zeetBranchDir, genBranchName));
           // Make branch's ACTIVITY file with pointer to current snapshot
           await fs.promises.writeFile(
-            path.resolve(zeetBranchDir, genBranchName, MYGIT_BRANCH_ACTIVITY),
+            path.resolve(zeetBranchDir, genBranchName, ZEET_BRANCH_ACTIVITY),
             nowSnapshotTkn,
             { encoding: "utf-8" }
           );
@@ -609,7 +609,7 @@ yargs(hideBin(process.argv))
 
           // 2. Find branch by the name specified
           const branchDirContents = await fs.promises.readdir(
-            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_BRANCH),
             {
               withFileTypes: true,
             }
@@ -619,7 +619,7 @@ yargs(hideBin(process.argv))
             .filter((item) => item.isDirectory())
             .map((dirEnt) =>
               path.join(
-                path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+                path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_BRANCH),
                 dirEnt.name
               )
             )
@@ -651,7 +651,7 @@ yargs(hideBin(process.argv))
           const branchMappingsObj = Object.fromEntries(branchMappings);
 
           const branchDirContents = await fs.promises.readdir(
-            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_BRANCH),
             {
               withFileTypes: true,
             }
@@ -702,17 +702,17 @@ yargs(hideBin(process.argv))
       const switchToBranch = branchName!.trim();
       const branchMapsFilePath = path.resolve(
         zeetParentDir,
-        MYGIT_DIRNAME,
-        MYGIT_BRANCH,
-        `${MYGIT_BRANCH_MAPPER}.json`
+        ZEET_DIRNAME,
+        ZEET_BRANCH,
+        `${ZEET_BRANCH_MAPPER}.json`
       );
 
       try {
         // If files are indexed in staging, reset the index
         const stgIndexPath = path.resolve(
           zeetParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_STAGING
+          ZEET_DIRNAME,
+          ZEET_STAGING
         );
         const stgIndex = await fs.promises
           .readFile(stgIndexPath, "utf-8")
@@ -745,9 +745,9 @@ yargs(hideBin(process.argv))
 
         const checkedOutBranchPath = path.resolve(
           zeetParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_BRANCH,
-          MYGIT_ACTIVE_BRANCH
+          ZEET_DIRNAME,
+          ZEET_BRANCH,
+          ZEET_ACTIVE_BRANCH
         );
         const checkedOutBranch = await fs.promises.readFile(
           checkedOutBranchPath,
@@ -760,12 +760,12 @@ yargs(hideBin(process.argv))
 
         const branchDirPath = path.resolve(
           zeetParentDir,
-          MYGIT_DIRNAME,
-          MYGIT_BRANCH
+          ZEET_DIRNAME,
+          ZEET_BRANCH
         );
         // 1. Update ACTIVE branch
         await fs.promises.writeFile(
-          path.resolve(branchDirPath, MYGIT_ACTIVE_BRANCH),
+          path.resolve(branchDirPath, ZEET_ACTIVE_BRANCH),
           sysNamedBranch,
           { encoding: "utf-8" }
         );
@@ -774,7 +774,7 @@ yargs(hideBin(process.argv))
         // Get branch's latest snapshot
         const branchLatestSnapshot = (
           await fs.promises.readFile(
-            path.resolve(branchDirPath, sysNamedBranch, MYGIT_BRANCH_ACTIVITY),
+            path.resolve(branchDirPath, sysNamedBranch, ZEET_BRANCH_ACTIVITY),
             "utf-8"
           )
         ).split(/\r?\n/)[0];
@@ -782,7 +782,7 @@ yargs(hideBin(process.argv))
 
         if (branchLatestSnapshot) {
           await fs.promises.writeFile(
-            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
+            path.resolve(zeetParentDir, ZEET_DIRNAME, ZEET_HEAD),
             `${sysNamedBranch}@${branchLatestSnapshot}`,
             { encoding: "utf-8" }
           );
@@ -791,8 +791,8 @@ yargs(hideBin(process.argv))
           // 4. Reset work dir with contents of pointer
           const snapshotStorePath = path.resolve(
             zeetParentDir,
-            MYGIT_DIRNAME,
-            MYGIT_REPO,
+            ZEET_DIRNAME,
+            ZEET_REPO,
             branchLatestSnapshot.split("&")[0],
             "store"
           );
