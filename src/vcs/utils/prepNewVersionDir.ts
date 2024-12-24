@@ -9,24 +9,24 @@ import { randomBase32String } from "./crumbleText";
 
 /**
  * Handles generation of new version directory; ready to take new changes from _work dir_
- * @param {string} mygitMsg The message for the commit operation
+ * @param {string} zeetMsg The message for the commit operation
  * @param {string} [copySrc] The _absolute path_ to source contents for the new version. Default is the immediate previous version for the current 'checked out' branch.
  */
-export async function prepNewVersionDir(mygitMsg: string, copySrc?: string) {
-  const myGitParentDir = resolveRoot.find();
+export async function prepNewVersionDir(zeetMsg: string, copySrc?: string) {
+  const zeetParentDir = resolveRoot.find();
 
   const new_V_DirName = randomBase32String() + "T" + Date.now().toString();
-  const repoBase = path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO);
+  const repoBase = path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO);
   const new_V_Base = path.join(repoBase, new_V_DirName, "store"); // Location for version snapshot
-  const mygitMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message
+  const zeetMsgBase = path.join(repoBase, new_V_DirName, "meta"); // Location for snapshot message
 
   // Make Version tracking directory
   fs.mkdirSync(new_V_Base, { recursive: true });
   // Make version meta directory
-  fs.mkdirSync(mygitMsgBase); // not specifying `recursive`
+  fs.mkdirSync(zeetMsgBase); // not specifying `recursive`
 
   // Save version message
-  fs.writeFileSync(path.join(mygitMsgBase, MYGIT_MESSAGE), mygitMsg, {
+  fs.writeFileSync(path.join(zeetMsgBase, MYGIT_MESSAGE), zeetMsg, {
     encoding: "utf-8",
   });
 
@@ -42,7 +42,7 @@ export async function prepNewVersionDir(mygitMsg: string, copySrc?: string) {
   }
 
   return {
-    /** Absolute path to `REPO` in `.mygit` */
+    /** Absolute path to `REPO` in `.zeet` */
     repoBase,
     /** Absolute path to directory of immediate previous version for the current branch; whose contents were used to create new version dir: `new_V_Base` */
     copyOverVersionDir,

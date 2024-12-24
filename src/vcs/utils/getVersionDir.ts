@@ -6,7 +6,7 @@ import resolveRoot from "./resolveRoot";
 
 /**
  * Get the most recently created direct child directory
- * @param {string} [dirPath] `.mygit` path that stores vesrioned snapshots
+ * @param {string} [dirPath] `.zeet` path that stores vesrioned snapshots
  * @param {"LATEST"|number} [period] Reference to a version. Passing `1`  or `"LATEST"` means most recent version. Default is `"LATEST"`. Greater number means older version. **Note:** If 'version reference number' is out of range, it will reduced to the equivalent modulo operation range.
  *
  * `0` is returned when no files are found under `dirPath`
@@ -15,9 +15,9 @@ export async function getVersionDir(
   dirPath?: string,
   period: "LATEST" | number = "LATEST"
 ) {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   const targetDir =
-    dirPath || path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO);
+    dirPath || path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO);
   // Read the contents of the directory
   const items = await fs.promises.readdir(targetDir, { withFileTypes: true });
 

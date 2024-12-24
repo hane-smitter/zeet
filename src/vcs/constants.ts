@@ -1,6 +1,6 @@
 import { obfuscate } from "./utils/crumbleText";
 
-export const MYGIT_DIRNAME = ".mygit";
+export const MYGIT_DIRNAME = ".zeet";
 export const MYGIT_STAGING = "STAGING";
 export const MYGIT_REPO = "REPO";
 export const MYGIT_HEAD = "HEAD";

@@ -6,8 +6,8 @@ import { workDirVersionInrepo } from "./workDirVersionInRepo";
 import resolveRoot from "./resolveRoot";
 
 export async function isModifiedFile(filePath: string) {
-  const myGitParentDir = resolveRoot.find();
-  const wdFilePath = path.resolve(myGitParentDir, filePath);
+  const zeetParentDir = resolveRoot.find();
+  const wdFilePath = path.resolve(zeetParentDir, filePath);
 
   await fs.promises.access(wdFilePath, fs.constants.F_OK); // Will throw if it does not exist
 
@@ -16,7 +16,7 @@ export async function isModifiedFile(filePath: string) {
 
   //   console.log("selectedVersionDir from ModifiedFile: ", selectedVersionDir, filePath);
 
-  const versionedFilePath = path.relative(myGitParentDir, wdFilePath);
+  const versionedFilePath = path.relative(zeetParentDir, wdFilePath);
 
   try {
     const wdFileContents = await fs.promises.readFile(wdFilePath, "utf-8");

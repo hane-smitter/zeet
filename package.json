@@ -1,5 +1,5 @@
 {
-  "name": "mygit",
+  "name": "zeet",
   "version": "1.0.0",
   "description": "Minimalist Git CLI",
   "main": "dist/main.js",
@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hane-smitter/mygit.git"
+    "url": "git+https://github.com/hane-smitter/zeet.git"
   },
   "author": "hane-smitter",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/hane-smitter/mygit/issues"
+    "url": "https://github.com/hane-smitter/zeet/issues"
   },
-  "homepage": "https://github.com/hane-smitter/mygit#readme",
+  "homepage": "https://github.com/hane-smitter/zeet#readme",
   "devDependencies": {
     "@types/diff": "^6.0.0",
     "@types/node": "20.x.x",
@@ -33,7 +33,7 @@
     "node": ">=20"
   },
   "bin": {
-    "mygit": "dist/vcs/index.js"
+    "zeet": "dist/vcs/index.js"
   },
   "dependencies": {
     "diff": "^7.0.0",

@@ -15,14 +15,14 @@ interface ISyncDir {
    */
   dest: string;
   /**
-   * If copying files should ignore files that match patterns in `.mygitignore` or `.gitignore`.
+   * If copying files should ignore files that match patterns in `.zeetignore` or `.gitignore`.
    * @default false
    */
   copyOp_ignore?: boolean;
   /**
-   * An _absolute path_ to modify path resolution to `.mygitignore` or `.gitignore`.
+   * An _absolute path_ to modify path resolution to `.zeetignore` or `.gitignore`.
    *
-   * Needful when you need to skip copying files that match `.mygitignore` patterns when `src` is not the project's root.
+   * Needful when you need to skip copying files that match `.zeetignore` patterns when `src` is not the project's root.
    */
   copyOp_ignoreRoot?: string;
 }
@@ -36,7 +36,7 @@ export async function synchronizeDestWithSrc({
   copyOp_ignore = false,
   copyOp_ignoreRoot,
 }: ISyncDir) {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   // Copy contents from `src` to `dest`
   // This will overwrite files that exist and create those that do not exist
   copyDir({
@@ -58,7 +58,7 @@ export async function synchronizeDestWithSrc({
     await Promise.all(
       destFilesToRemove.map(async (destFile) => {
         try {
-          await fs.promises.unlink(path.join(myGitParentDir, destFile));
+          await fs.promises.unlink(path.join(zeetParentDir, destFile));
         } catch (error) {
           console.error(
             `[Branch switch]Failed to clean up file in: ${destFile}`,

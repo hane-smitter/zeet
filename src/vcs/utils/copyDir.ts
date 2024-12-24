@@ -10,14 +10,14 @@ interface IDetails {
   src: string;
   /** Destination directory path */
   dest: string;
-  /** `true` means skip copying files that match ignore patterns in `.mygitignore` or `.gitignore`. Default is `false`.
+  /** `true` means skip copying files that match ignore patterns in `.zeetignore` or `.gitignore`. Default is `false`.
    * @default false
    */
   ignore?: boolean;
   /**
-   * An absolute path to `.mygitignore` or `.gitignore` file. This changes file resolution of ignore patterns.
+   * An absolute path to `.zeetignore` or `.gitignore` file. This changes file resolution of ignore patterns.
    * This is useful when you would want a file to still be ignored according to ignore patterns when it is deeply nested.
-   * **NOTE:** This does not change location `.mygitnore` but rather changes how ignored files are resolved
+   * **NOTE:** This does not change location `.zeetnore` but rather changes how ignored files are resolved
    */
   ignoreRoot?: string;
 }
@@ -28,9 +28,9 @@ export function copyDir({
   ignore = false,
   ignoreRoot,
 }: IDetails): void {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   // This is only used for resolving patterns to ignore
-  const ignoreResolutionPath = ignoreRoot || myGitParentDir;
+  const ignoreResolutionPath = ignoreRoot || zeetParentDir;
 
   if (src === dest) return;
   if (!fs.existsSync(dest)) {
@@ -39,20 +39,20 @@ export function copyDir({
 
   let ig: Ignore | null = null;
   if (ignore) {
-    const myGitignorePath = path.resolve(myGitParentDir, ".mygitignore");
-    const gitignorePath = path.resolve(myGitParentDir, ".gitignore");
+    const zeetignorePath = path.resolve(zeetParentDir, ".zeetignore");
+    const gitignorePath = path.resolve(zeetParentDir, ".gitignore");
 
-    // Load `.mygitignore` file. If not exist, Load `.gitignore`
-    let myGitignorePatterns: string[] = [];
-    if (fs.existsSync(myGitignorePath)) {
-      const myGitignoreContent = fs.readFileSync(myGitignorePath, "utf-8");
-      myGitignorePatterns = myGitignoreContent.split(/\r?\n/).filter(Boolean);
+    // Load `.zeetignore` file. If not exist, Load `.gitignore`
+    let zeetignorePatterns: string[] = [];
+    if (fs.existsSync(zeetignorePath)) {
+      const zeetignoreContent = fs.readFileSync(zeetignorePath, "utf-8");
+      zeetignorePatterns = zeetignoreContent.split(/\r?\n/).filter(Boolean);
     } else if (fs.existsSync(gitignorePath)) {
       const gitignoreContent = fs.readFileSync(gitignorePath, "utf-8");
-      myGitignorePatterns = gitignoreContent.split(/\r?\n/).filter(Boolean);
+      zeetignorePatterns = gitignoreContent.split(/\r?\n/).filter(Boolean);
     }
 
-    ig = ignoreMatch().add(myGitignorePatterns);
+    ig = ignoreMatch().add(zeetignorePatterns);
   }
 
   const entries = fs.readdirSync(src, { withFileTypes: true });

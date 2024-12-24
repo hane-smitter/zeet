@@ -13,10 +13,10 @@ import resolveRoot from "./resolveRoot";
 import { prependDataInFile } from "./prependDataInFile";
 
 export function commitCloseRoutine(new_V_DirName: string) {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   // After versioning, reset the staging index
   fs.writeFileSync(
-    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
     "",
     {
       encoding: "utf-8",
@@ -26,7 +26,7 @@ export function commitCloseRoutine(new_V_DirName: string) {
   const currentActiveBranch = fs
     .readFileSync(
       path.resolve(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         MYGIT_ACTIVE_BRANCH
@@ -36,7 +36,7 @@ export function commitCloseRoutine(new_V_DirName: string) {
     .split(/\r?\n/)[0];
   const updatedHead = currentActiveBranch + "@" + new_V_DirName;
   fs.writeFileSync(
-    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
+    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
     updatedHead,
     { encoding: "utf-8" }
   );
@@ -45,7 +45,7 @@ export function commitCloseRoutine(new_V_DirName: string) {
   // Reading file belonging to a branch that stores pointers. Add `new_V_DirName` to the top.
   prependDataInFile(
     path.join(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_BRANCH,
       currentActiveBranch,

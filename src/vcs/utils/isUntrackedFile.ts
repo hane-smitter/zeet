@@ -5,10 +5,10 @@ import { workDirVersionInrepo } from "./workDirVersionInRepo";
 import resolveRoot from "./resolveRoot";
 
 export async function isUntrackedFile(filePath: string) {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   // Check `filePath` exists in wd
   await fs.promises.access(
-    path.resolve(myGitParentDir, filePath),
+    path.resolve(zeetParentDir, filePath),
     fs.constants.F_OK
   );
 
@@ -17,8 +17,8 @@ export async function isUntrackedFile(filePath: string) {
   if (!selectedVersionDir) return true;
 
   const relativeFilePath = path.relative(
-    myGitParentDir,
-    path.resolve(myGitParentDir, filePath)
+    zeetParentDir,
+    path.resolve(zeetParentDir, filePath)
   );
 
   let fileExistsInRepo: boolean | undefined;

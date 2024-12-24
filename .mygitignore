@@ -131,4 +131,4 @@ dist
 
 # Custom
 *.bak*
-.mygit/
+.zeet/

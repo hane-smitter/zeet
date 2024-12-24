@@ -30,15 +30,15 @@ export const merge = async (
   const { branchName } = argv;
   const branchToMerge = branchName.trim();
 
-  const myGitParentDir = resolveRoot.find();
-  const myGitBranchDir = path.resolve(
-    myGitParentDir,
+  const zeetParentDir = resolveRoot.find();
+  const zeetBranchDir = path.resolve(
+    zeetParentDir,
     MYGIT_DIRNAME,
     MYGIT_BRANCH
   );
 
   const branchMapsFilePath = path.resolve(
-    myGitParentDir,
+    zeetParentDir,
     MYGIT_DIRNAME,
     MYGIT_BRANCH,
     `${MYGIT_BRANCH_MAPPER}.json`
@@ -58,7 +58,7 @@ export const merge = async (
   })();
   if (!sysNamedBranch) {
     console.error(
-      `${branchToMerge} is unknown. See 'mygit branch --list' for available branches`
+      `${branchToMerge} is unknown. See 'zeet branch --list' for available branches`
     );
     process.exit(1);
   }
@@ -66,7 +66,7 @@ export const merge = async (
   /**  Active branch: Currently checked out */
   const mergeBranch1 = (
     await fs.promises.readFile(
-      path.resolve(myGitBranchDir, MYGIT_ACTIVE_BRANCH),
+      path.resolve(zeetBranchDir, MYGIT_ACTIVE_BRANCH),
       "utf-8"
     )
   ).split(/\r?\n/)[0];
@@ -75,14 +75,14 @@ export const merge = async (
 
   const branch_1_Activity = (
     await fs.promises.readFile(
-      path.resolve(myGitBranchDir, mergeBranch1, MYGIT_BRANCH_ACTIVITY),
+      path.resolve(zeetBranchDir, mergeBranch1, MYGIT_BRANCH_ACTIVITY),
       "utf-8"
     )
   ).split(/\r?\n/);
   const branch_1_ActivitySet = new Set(branch_1_Activity);
   const branch_2_Activity = (
     await fs.promises.readFile(
-      path.resolve(myGitBranchDir, mergeBranch2, MYGIT_BRANCH_ACTIVITY),
+      path.resolve(zeetBranchDir, mergeBranch2, MYGIT_BRANCH_ACTIVITY),
       "utf-8"
     )
   ).split(/\r?\n/);
@@ -131,14 +131,14 @@ export const merge = async (
     const mergeBase = branch_2_Activity[branch2LineCommonBaseIdx];
     const brach2Tip = branch_2_Activity[0];
     const branch_1_TipSnapPath = path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       mergeBase,
       "store"
     );
     const branch_2_TipSnapPath = path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       brach2Tip,
@@ -190,17 +190,17 @@ export const merge = async (
     // Update working directory with latest repo changes
     await synchronizeDestWithSrc({
       src: branch_2_TipSnapPath,
-      dest: myGitParentDir,
+      dest: zeetParentDir,
     });
 
     // Update branch1 activity
     await fs.promises.writeFile(
-      path.resolve(myGitBranchDir, mergeBranch1, MYGIT_BRANCH_ACTIVITY),
+      path.resolve(zeetBranchDir, mergeBranch1, MYGIT_BRANCH_ACTIVITY),
       orderedBranch_1_activity.join("\n")
     );
     // Update HEAD
     const headFilePath = path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_HEAD
     );
@@ -226,7 +226,7 @@ export const merge = async (
     );
     /**`REPO` 'store' path to the version pointed by 'common ancestor' between 'branch 1' and 'branch 2' */
     const mergeBaseSnapPath = path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       mergeBase,
@@ -234,7 +234,7 @@ export const merge = async (
     );
     /**`REPO` 'store' path to the version pointed by tip of' branch 1' */
     const branch_1_TipSnapPath = path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       branch1Tip,
@@ -242,7 +242,7 @@ export const merge = async (
     );
     /**`REPO` 'store' path to the version pointed by tip of' branch 2' */
     const branch_2_TipSnapPath = path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       branch2Tip,
@@ -382,7 +382,7 @@ export const merge = async (
     // Synchronize the work dir regardless if conflicts occured or not
     await synchronizeDestWithSrc({
       src: new_V_Base,
-      dest: myGitParentDir,
+      dest: zeetParentDir,
     });
 
     // If merge conflicts do not exist, we do a merge commit, else we remove the merge version creted while maintaining changes in work dir

@@ -20,11 +20,11 @@ import { readFileLines } from "../utils/readFileLines";
 import { TerminalPager } from "../utils/terminalPager";
 
 export const log = async (argv: ArgumentsCamelCase<{}>) => {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   const branchMappings = await fs.promises
     .readFile(
       path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         `${MYGIT_BRANCH_MAPPER}.json`
@@ -37,9 +37,9 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
   const branchMappingsObj = Object.fromEntries(branchMappings);
 
   /** Checked out branch */
-  const coBranch = await getActiveBranch(myGitParentDir, branchMappings);
+  const coBranch = await getActiveBranch(zeetParentDir, branchMappings);
 
-  // If no checked out branch, then `.mygit` repo set up is corrupted/altered
+  // If no checked out branch, then `.zeet` repo set up is corrupted/altered
   if (!coBranch) {
     console.error(styleText("red", "IKO SHIDA! Repository is corrupted."));
     process.exit(1);
@@ -47,7 +47,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
 
   const { computedName, enteredName } = coBranch;
   const activeBranchActivityPath = path.join(
-    myGitParentDir,
+    zeetParentDir,
     MYGIT_DIRNAME,
     MYGIT_BRANCH,
     computedName,
@@ -74,7 +74,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
   for (let idx = 0; idx < branchHistoryLogs.length; idx++) {
     const versionRepo = branchHistoryLogs[idx];
     const repoDirPath = path.join(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       versionRepo
@@ -100,7 +100,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
   commitDetails.sort((a, b) => b.created.getTime() - a.created.getTime());
 
   // Get names of other branches
-  const branchesPath = path.join(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH);
+  const branchesPath = path.join(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH);
   const otherBranches = await fs.promises
     .readdir(branchesPath, {
       withFileTypes: true,
@@ -122,7 +122,7 @@ export const log = async (argv: ArgumentsCamelCase<{}>) => {
   for (let idx = 0; idx < otherBranches.length; idx++) {
     const branchName = otherBranches[idx];
     const branchPath = path.join(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_BRANCH,
       branchName
@@ -245,7 +245,7 @@ async function getActiveBranch(
       return branchInfo;
     }
 
-    // 2. Read active branch from Branches in `.mygit`
+    // 2. Read active branch from Branches in `.zeet`
     const activeBranchFile = path.join(
       projectRoot,
       MYGIT_DIRNAME,

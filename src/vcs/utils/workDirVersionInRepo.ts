@@ -24,17 +24,17 @@ import resolveRoot from "./resolveRoot";
  * @param {boolean} [raw] If `true` current commit returned won't be sanitized. Return value will still look normal with exception when current snapshot is by a merge commit that appears differently in the way it is constructed.
  */
 export async function workDirVersionInrepo(raw?: boolean) {
-  const myGitParentDir = resolveRoot.find();
-  const repoDir = path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO);
+  const zeetParentDir = resolveRoot.find();
+  const repoDir = path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO);
 
-  const myGitVersionTracker = path.resolve(
-    myGitParentDir,
+  const zeetVersionTracker = path.resolve(
+    zeetParentDir,
     MYGIT_DIRNAME,
     MYGIT_HEAD
   );
-  // `myGitVersionTracker` should be a file with a single entry
+  // `zeetVersionTracker` should be a file with a single entry
   //  We are `split`ting by newline `\n` character just to ensure we get first only string(incase there's more)
-  let nowVersion = (await fs.promises.readFile(myGitVersionTracker, "utf-8"))
+  let nowVersion = (await fs.promises.readFile(zeetVersionTracker, "utf-8"))
     .split(/\r?\n/)[0]
     // Remove branch name
     .replace(/^.+@/g, "");
@@ -54,7 +54,7 @@ export async function workDirVersionInrepo(raw?: boolean) {
   // This process will read the most recent snapshot token from an ACTIVE branch's ACTIVITY
   const activeBranch = await fs.promises.readFile(
     path.resolve(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_BRANCH,
       MYGIT_ACTIVE_BRANCH
@@ -64,7 +64,7 @@ export async function workDirVersionInrepo(raw?: boolean) {
   let branchLatestSnap = (
     await fs.promises.readFile(
       path.resolve(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         activeBranch,

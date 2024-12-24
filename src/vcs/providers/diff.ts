@@ -21,7 +21,7 @@ import { TerminalPager } from "../utils/terminalPager";
 export const diff = async (
   argv: ArgumentsCamelCase<{ fileOrVersion?: string[] }>
 ) => {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
 
   const [diffTarget1, diffTarget2] = (argv.fileOrVersion || []).map((t) =>
     t?.trim()
@@ -34,7 +34,7 @@ export const diff = async (
     // diffTarget1 is a commit
     const commitId1 = diffTarget1.split("&")[0]; // accounts for merge commit structure
     const versionPath1 = path.join(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       commitId1
@@ -55,14 +55,14 @@ export const diff = async (
       // diffTarget2 is a commit
       const commitId2 = diffTarget2.split("&")[0];
       const versionPath2 = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_REPO,
         commitId2
       );
       const versionStore2 = path.join(versionPath2, "store");
 
-      // Continue only if `commitId` exists in `.mygit` REPO
+      // Continue only if `commitId` exists in `.zeet` REPO
       if (!fs.existsSync(versionPath2)) {
         console.error(`This revision: ${diffTarget2} is not known`);
         process.exit(1);
@@ -80,14 +80,14 @@ export const diff = async (
 
         if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
-    } else if (getBranch(diffTarget2, myGitParentDir)) {
+    } else if (getBranch(diffTarget2, zeetParentDir)) {
       // diffTarget2 is a branch
-      const branch2 = getBranch(diffTarget2, myGitParentDir);
+      const branch2 = getBranch(diffTarget2, zeetParentDir);
       if (!branch2) throw new Error("Branch2 not found");
 
       // If branch exists, get the most recent commit from it
       const branchActivityPath = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         branch2[0],
@@ -103,13 +103,13 @@ export const diff = async (
       }
 
       const versionPath2 = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_REPO,
         branchLatestComm2
       );
       const versionStore2 = path.join(versionPath2, "store");
-      // Continue only if `branchLatestComm` exists in `.mygit` REPO
+      // Continue only if `branchLatestComm` exists in `.zeet` REPO
       if (!fs.existsSync(versionPath2)) {
         console.error(
           `This revision: ${branchLatestComm2} in branch '${branch2[1]}' is corrupt`
@@ -142,17 +142,17 @@ export const diff = async (
       let filePath = path.isAbsolute(diffTarget2)
         ? diffTarget2
         : path.join(process.cwd(), diffTarget2); // will correctly handle paths like '../../file'
-      if (!filePath.includes(myGitParentDir)) {
+      if (!filePath.includes(zeetParentDir)) {
         console.error(
-          `IKO SHIDA! Path: '${filePath}' is outside repository at '${myGitParentDir}'`
+          `IKO SHIDA! Path: '${filePath}' is outside repository at '${zeetParentDir}'`
         );
         process.exit(1);
       }
 
       // Convert path to relative
-      filePath = path.relative(myGitParentDir, filePath);
+      filePath = path.relative(zeetParentDir, filePath);
 
-      const versionStore2 = myGitParentDir; // working directory
+      const versionStore2 = zeetParentDir; // working directory
 
       const modelledPatch = await generateDiff({
         oldFilePath: path.join(versionStore1, filePath),
@@ -168,7 +168,7 @@ export const diff = async (
       displayError(diffTarget2);
       process.exit(1);
     } else {
-      const versionStore2 = myGitParentDir;
+      const versionStore2 = zeetParentDir;
 
       for (let idx = 0; idx < versionStoreFiles1.length; idx++) {
         const filePath = versionStoreFiles1[idx];
@@ -183,15 +183,15 @@ export const diff = async (
         if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
     }
-  } else if (getBranch(diffTarget1, myGitParentDir)) {
+  } else if (getBranch(diffTarget1, zeetParentDir)) {
     // diffTarget1 is a branch
 
-    const branch1 = getBranch(diffTarget1, myGitParentDir);
+    const branch1 = getBranch(diffTarget1, zeetParentDir);
     if (!branch1) throw new Error("Branch1 not found");
 
     // If branch exists, get the most recent commit from it
     const branchActivityPath1 = path.join(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_BRANCH,
       branch1[0],
@@ -208,7 +208,7 @@ export const diff = async (
 
     const commitId1 = branchLatestComm1;
     const versionPath1 = path.join(
-      myGitParentDir,
+      zeetParentDir,
       MYGIT_DIRNAME,
       MYGIT_REPO,
       commitId1
@@ -229,14 +229,14 @@ export const diff = async (
       // diffTarget2 is a commit
       const commitId2 = diffTarget2.split("&")[0];
       const versionPath2 = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_REPO,
         commitId2
       );
       const versionStore2 = path.join(versionPath2, "store");
 
-      // Continue only if `commitId` exists in `.mygit` REPO
+      // Continue only if `commitId` exists in `.zeet` REPO
       if (!fs.existsSync(versionPath2)) {
         displayError(diffTarget2);
         process.exit(1);
@@ -258,14 +258,14 @@ export const diff = async (
 
         if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
       }
-    } else if (getBranch(diffTarget2, myGitParentDir)) {
+    } else if (getBranch(diffTarget2, zeetParentDir)) {
       // diffTarget2 is a branch
-      const branch2 = getBranch(diffTarget2, myGitParentDir);
+      const branch2 = getBranch(diffTarget2, zeetParentDir);
       if (!branch2) throw new Error("Branch2 not found");
 
       // If branch exists, get the most recent commit from it
       const branchActivityPath = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         branch2[0],
@@ -281,13 +281,13 @@ export const diff = async (
       }
 
       const versionPath2 = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_REPO,
         branchLatestComm2
       );
       const versionStore2 = path.join(versionPath2, "store");
-      // Continue only if `branchLatestComm` exists in `.mygit` REPO
+      // Continue only if `branchLatestComm` exists in `.zeet` REPO
       if (!fs.existsSync(versionPath2)) {
         console.error(
           `This revision: ${branchLatestComm2} in branch '${branch2[1]}' is corrupt`
@@ -325,17 +325,17 @@ export const diff = async (
       let filePath = path.isAbsolute(diffTarget2)
         ? diffTarget2
         : path.join(process.cwd(), diffTarget2); // will correctly handle paths like '../../file'
-      if (!filePath.includes(myGitParentDir)) {
+      if (!filePath.includes(zeetParentDir)) {
         console.error(
-          `IKO SHIDA! Path: '${filePath}' is outside repository at '${myGitParentDir}'`
+          `IKO SHIDA! Path: '${filePath}' is outside repository at '${zeetParentDir}'`
         );
         process.exit(1);
       }
 
       // Convert path to relative
-      filePath = path.relative(myGitParentDir, filePath);
+      filePath = path.relative(zeetParentDir, filePath);
 
-      const versionStore2 = myGitParentDir; // working directory
+      const versionStore2 = zeetParentDir; // working directory
 
       const modelledPatch = await generateDiff({
         oldFilePath: path.join(versionStore1, filePath),
@@ -351,7 +351,7 @@ export const diff = async (
       displayError(diffTarget2);
       process.exit(1);
     } else {
-      const versionStore2 = myGitParentDir;
+      const versionStore2 = zeetParentDir;
 
       for (let idx = 0; idx < versionStoreFiles1.length; idx++) {
         const filePath = versionStoreFiles1[idx];
@@ -378,35 +378,35 @@ export const diff = async (
     let filePath1 = path.isAbsolute(diffTarget1)
       ? diffTarget1
       : path.join(process.cwd(), diffTarget1); // will correctly handle paths like '../../file'
-    if (!filePath1.includes(myGitParentDir)) {
+    if (!filePath1.includes(zeetParentDir)) {
       console.error(
-        `IKO SHIDA! Path: '${filePath1}' is outside repository at '${myGitParentDir}'`
+        `IKO SHIDA! Path: '${filePath1}' is outside repository at '${zeetParentDir}'`
       );
       process.exit(1);
     }
 
     // Convert path to relative
-    filePath1 = path.relative(myGitParentDir, filePath1);
+    filePath1 = path.relative(zeetParentDir, filePath1);
 
     if (isCommitId(diffTarget2)) {
       // diffTarget2 is a commit
       const commitId2 = diffTarget2.split("&")[0];
       const versionPath2 = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_REPO,
         commitId2
       );
       const versionStore2 = path.join(versionPath2, "store");
 
-      // Continue only if `commitId` exists in `.mygit` REPO
+      // Continue only if `commitId` exists in `.zeet` REPO
       if (!fs.existsSync(versionPath2)) {
         console.error(`This revision: ${diffTarget2} is not known`);
         process.exit(1);
       }
 
       // Find filePath1 in the commit: diffTarget2
-      const workDirPath = myGitParentDir;
+      const workDirPath = zeetParentDir;
 
       const modelledPatch = await generateDiff({
         oldFilePath: path.join(workDirPath, filePath1),
@@ -416,14 +416,14 @@ export const diff = async (
       });
 
       if (modelledPatch) LOG_OUTPUT += modelledPatch + "\n";
-    } else if (getBranch(diffTarget2, myGitParentDir)) {
+    } else if (getBranch(diffTarget2, zeetParentDir)) {
       // diffTarget2 is a branch
-      const branch2 = getBranch(diffTarget2, myGitParentDir);
+      const branch2 = getBranch(diffTarget2, zeetParentDir);
       if (!branch2) throw new Error("Branch2 not found");
 
       // If branch exists, get the most recent commit from it
       const branchActivityPath = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         branch2[0],
@@ -439,13 +439,13 @@ export const diff = async (
       }
 
       const versionPath2 = path.join(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_REPO,
         branchLatestComm2
       );
       const versionStore2 = path.join(versionPath2, "store");
-      // Continue only if `branchLatestComm` exists in `.mygit` REPO
+      // Continue only if `branchLatestComm` exists in `.zeet` REPO
       if (!fs.existsSync(versionPath2)) {
         console.error(
           `This revision: ${branchLatestComm2} in branch '${branch2[1]}' is corrupt`
@@ -454,7 +454,7 @@ export const diff = async (
       }
 
       const modelledPatch = await generateDiff({
-        oldFilePath: path.join(myGitParentDir, filePath1),
+        oldFilePath: path.join(zeetParentDir, filePath1),
         newFilePath: path.join(versionStore2, filePath1),
         newFileName: filePath1,
         oldFileName: filePath1,
@@ -474,18 +474,18 @@ export const diff = async (
       let filePath2 = path.isAbsolute(diffTarget2)
         ? diffTarget2
         : path.join(process.cwd(), diffTarget2); // will correctly handle paths like '../../file'
-      if (!filePath2.includes(myGitParentDir)) {
+      if (!filePath2.includes(zeetParentDir)) {
         console.error(
-          `IKO SHIDA! Path: '${filePath2}' is outside repository at '${myGitParentDir}'`
+          `IKO SHIDA! Path: '${filePath2}' is outside repository at '${zeetParentDir}'`
         );
         process.exit(1);
       }
 
       // Convert path to relative
-      filePath2 = path.relative(myGitParentDir, filePath2);
+      filePath2 = path.relative(zeetParentDir, filePath2);
 
       const compareFiles = [...new Set([filePath1, filePath2])]; // dedupe incase the same file path is provided twice
-      const versionStore2 = myGitParentDir; // working directory
+      const versionStore2 = zeetParentDir; // working directory
 
       const mostRecentVersion = await workDirVersionInrepo();
       const versionStore1 = path.join(mostRecentVersion, "store");
@@ -508,7 +508,7 @@ export const diff = async (
     } else {
       const mostRecentVersion = await workDirVersionInrepo();
       const versionStore1 = path.join(mostRecentVersion, "store");
-      const versionStore2 = myGitParentDir; // working directory
+      const versionStore2 = zeetParentDir; // working directory
 
       const modelledPatch = await generateDiff({
         oldFilePath: path.join(versionStore1, filePath1),
@@ -527,7 +527,7 @@ export const diff = async (
   else {
     const mostRecentVersion = await workDirVersionInrepo();
     const versionStore1 = path.join(mostRecentVersion, "store");
-    const versionStore2 = myGitParentDir;
+    const versionStore2 = zeetParentDir;
     const recentCommitFiles = await Promise.all([
       getFilePathsUnderDir(undefined, versionStore1),
       getFilePathsUnderDir(undefined, versionStore2),
@@ -558,7 +558,7 @@ export const diff = async (
 function displayError(term: string) {
   console.error(`${styleText("red", "Argument: " + term + " is unknown.")}
 The argument is neither a revision nor an existent file path under this repo.
-Use a revision from 'mygit log' or branch from 'mygit branch'. Or a valid file path under this repository`);
+Use a revision from 'zeet log' or branch from 'zeet branch'. Or a valid file path under this repository`);
 }
 
 function isCommitId(id: string) {
@@ -671,7 +671,7 @@ function colorizeAndStringifyPatch(
   // Start with the header
   let patchString = styleText(
     "bold",
-    `diff --mygit a/${patchDiff.oldFileName} b/${patchDiff.newFileName}\n`
+    `diff --zeet a/${patchDiff.oldFileName} b/${patchDiff.newFileName}\n`
   );
   // patchString += styleText("bold", `--- a/${patchDiff.oldFileName}\n`);
   patchString += styleText(

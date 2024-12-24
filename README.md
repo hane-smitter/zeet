@@ -1,16 +1,16 @@
-# `mygit` ― A Distributed Source Control System (Git-like)
+# `zeet` ― A Distributed Source Control System (Git-like)
 
-This project implements a distributed source control system in the style of Git. It is called `mygit`. It provides core functionalities required for version control, such as initializing repositories, staging files, committing changes, and more. The tool is built to manage repositories on the local disk and is designed to be used as a CLI tool.
+This project implements a distributed source control system in the style of Git. It is called `zeet`. It provides core functionalities required for version control, such as initializing repositories, staging files, committing changes, and more. The tool is built to manage repositories on the local disk and is designed to be used as a CLI tool.
 
 ## Features
 
-- **Initialize Repository**: Create a repository in a directory, with the repository data stored in a `.mygit` subdirectory.
-- **Staging Files**: Add files to the staging area. (`mygit add .`)
+- **Initialize Repository**: Create a repository in a directory, with the repository data stored in a `.zeet` subdirectory.
+- **Staging Files**: Add files to the staging area. (`zeet add .`)
 - **Committing Changes**: Commit staged files with _messages_.
 - **Branching**: Create and switch between branches.
 - **Merging**: Merge branches with parallel work into mainline. _Fast-forward_ and _3-way merge_ are intelligently used to merge.
 - **Conflicts marking**: Conflicts are detected during merge and affected region in files are marked with symbols: `<<<<<<<`, `=======` and `>>>>>>>`.(conflicts require manual resolution)
-- **File Ignoring**: Specify files to be ignored during commits in `.mygitignore` file. Will look for `.gitignore` file if missing.
+- **File Ignoring**: Specify files to be ignored during commits in `.zeetignore` file. Will look for `.gitignore` file if missing.
 - **Viewing Commit History**: View the commit history with detailed information in a colorized output.
 - **Diffs**: View differences between commits and branches.
 
@@ -22,7 +22,7 @@ The project doesn't yet include advanced features like rebasing or conflict reso
 
 ## Software requirements
 
-`mygit` is **platform agnostic**. It runs on node.js.  
+`zeet` is **platform agnostic**. It runs on node.js.  
 You need to ensure you have [_node.js_](https://nodejs.org/en/download/package-manager) installed on your machine. The recommended version is at least version **>=20**.
 
 ## Installation
@@ -30,8 +30,8 @@ You need to ensure you have [_node.js_](https://nodejs.org/en/download/package-m
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/hane-smitter/mygit.git
-   cd mygit
+   git clone https://github.com/hane-smitter/zeet.git
+   cd zeet
    ```
 
 2. **Install dependencies**:
@@ -53,7 +53,7 @@ You need to ensure you have [_node.js_](https://nodejs.org/en/download/package-m
    npm link
    ```
 
-   This will allow you to use the `mygit` command in any repository.
+   This will allow you to use the `zeet` command in any repository.
 
 ## Usage
 
@@ -62,41 +62,41 @@ Once the project is linked globally, you can use it directly from the command li
 - **Initialize a repository**:
 
   ```bash
-  mygit init
+  zeet init
   ```
 
-  This creates a new repository in the current directory, storing the repository data in a `.mygit` subdirectory.
+  This creates a new repository in the current directory, storing the repository data in a `.zeet` subdirectory.
 
 - **Stage files**:
 
   ```bash
-  mygit add <file1> <file2> ...
+  zeet add <file1> <file2> ...
   ```
 
   This stages the specified files, preparing them for commit.  
   Alternatively, you can use:
 
   ```bash
-  mygit add .
+  zeet add .
   ```
 
 - **View commit status**:
 
   ```bash
-  mygit status
+  zeet status
   ```
 
   Shows files added to staging area and those that are not. Convenient to check files that will go into the next commit.
 
   <figure>
-    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-status-out.jpg" alt="status of changed files" />
-    <figcaption>Sample output of <code>mygit status</code></figcaption>
+    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-status-out.jpg" alt="status of changed files" />
+    <figcaption>Sample output of <code>zeet status</code></figcaption>
   </figure>
 
 - **Commit changes**:
 
   ```bash
-  mygit commit -m "Commit message"
+  zeet commit -m "Commit message"
   ```
 
   This commits the staged changes with the provided commit message.
@@ -104,20 +104,20 @@ Once the project is linked globally, you can use it directly from the command li
 - **View commit history**:
 
   ```bash
-  mygit log
+  zeet log
   ```
 
   This displays the commit history, showing commit hashes, messages, and timestamps.
 
   <figure>
-    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-commit-hist3.jpg" alt="commit history log from CLI too called mygit" />
-    <figcaption>Sample output of <code>mygit log</code></figcaption>
+    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-commit-hist3.jpg" alt="commit history log from CLI too called zeet" />
+    <figcaption>Sample output of <code>zeet log</code></figcaption>
   </figure>
 
 - **Create branches**:
 
   ```bash
-  mygit branch <branch-name>
+  zeet branch <branch-name>
   ```
 
   This creates a new branch.
@@ -125,7 +125,7 @@ Once the project is linked globally, you can use it directly from the command li
   - **Switch branches**:
 
   ```bash
-  mygit switch <branch-name>
+  zeet switch <branch-name>
   ```
 
   This switches to a created branch.
@@ -133,7 +133,7 @@ Once the project is linked globally, you can use it directly from the command li
 - **Merge branches**:
 
   ```bash
-  mygit merge <branch-name>
+  zeet merge <branch-name>
   ```
 
   This merges `<branch-name>` into the current checked out branch, with conflict detection.  
@@ -142,39 +142,39 @@ Once the project is linked globally, you can use it directly from the command li
 - **View diffs**:
 
   ```bash
-  mygit diff <commit-hash>
+  zeet diff <commit-hash>
   ```
 
   This shows the differences between working directory and the commit. In place of `<commit-hash>`, you can also specify branch or path to a file under repository.
 
   <figure>
-    <img src="https://raw.githubusercontent.com/hane-smitter/mygit/refs/heads/assets/mygit-diff-out2.jpg" alt="Diff between commits" />
-    <figcaption>Sample output of <code>mygit diff</code></figcaption>
+    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-diff-out2.jpg" alt="Diff between commits" />
+    <figcaption>Sample output of <code>zeet diff</code></figcaption>
   </figure>
 
   Other than diffing with the working directory, you can also diff between 2 commits, branches or files. For example:
 
   ```bash
   # Compare changes between commits
-  mygit diff <commit-hash1> <commit-hash2>
+  zeet diff <commit-hash1> <commit-hash2>
 
   # Compare changes between branches
-  mygit diff <stem> <feature-branch>
+  zeet diff <stem> <feature-branch>
 
   # Compare differences of 'file1' in working directory with 'file1' in 'feature-branch'
-  mygit diff <file1> <feature-branch>
+  zeet diff <file1> <feature-branch>
 
   # Compare changes in files in workdir with the last recent commit
-  mygit diff <file1> <file2>
+  zeet diff <file1> <file2>
   ```
 
 - **Ignore files**:
-  Create a `.mygitignore` file in your repository root and list the files to be ignored.  
+  Create a `.zeetignore` file in your repository root and list the files to be ignored.  
   It accepts the same patterns as `git`.
 
 <!-- - **Clone a repository**:
   ```bash
-  mygit clone <source-directory> <destination-directory>
+  zeet clone <source-directory> <destination-directory>
   ```
   This clones the repository from the source directory to the destination directory. -->
 

@@ -8,7 +8,7 @@ export default class resolveRoot {
   static #rootPath: string | undefined;
 
   /**
-   * Finds the nearest parent directory of `.mygit`
+   * Finds the nearest parent directory of `.zeet`
    */
   static find() {
     if (this.#rootPath) {
@@ -16,18 +16,18 @@ export default class resolveRoot {
     }
 
     while (this.#currentDir !== path.parse(this.#currentDir).root) {
-      const mygitPath = path.join(this.#currentDir, MYGIT_DIRNAME);
+      const zeetPath = path.join(this.#currentDir, MYGIT_DIRNAME);
 
-      if (fs.existsSync(mygitPath)) {
-        const mygitParent = this.#currentDir;
-        this.#rootPath = mygitParent;
-        return mygitParent;
+      if (fs.existsSync(zeetPath)) {
+        const zeetParent = this.#currentDir;
+        this.#rootPath = zeetParent;
+        return zeetParent;
       }
 
       this.#currentDir = path.dirname(this.#currentDir);
     }
 
-    // throw new Error("Could not find 'mygit' root");
+    // throw new Error("Could not find 'zeet' root");
     return "";
   }
 }

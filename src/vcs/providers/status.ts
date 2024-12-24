@@ -15,10 +15,10 @@ import { getFilePathsUnderDir, shouldStageFile } from "../utils";
 import { workDirVersionInrepo } from "../utils/workDirVersionInRepo";
 
 export const status = async (argv: ArgumentsCamelCase<{}>) => {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
   const customTab = "  "; // Two white spaces
 
-  const wdFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.mygitignore` or `.gitignore`
+  const wdFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.zeetignore` or `.gitignore`
   const wdFilePathsSet = new Set([...wdFilePaths]);
 
   // 1. Extract paths that have modifications from `wdFilePaths`
@@ -52,7 +52,7 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
   // 4. Get Files paths added in staging area
   const stagingFiles = (
     await fs.promises.readFile(
-      path.join(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+      path.join(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
       "utf-8"
     )
   )
@@ -71,13 +71,13 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
   // 6. Logs output
   // 6.1 Log checked out branch
   const activeBranchFilePath = path.resolve(
-    myGitParentDir,
+    zeetParentDir,
     MYGIT_DIRNAME,
     MYGIT_BRANCH,
     MYGIT_ACTIVE_BRANCH
   );
   const branchMapsFilePath = path.resolve(
-    myGitParentDir,
+    zeetParentDir,
     MYGIT_DIRNAME,
     MYGIT_BRANCH,
     `${MYGIT_BRANCH_MAPPER}.json`
@@ -104,7 +104,7 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
     stagedChanges.forEach((staged) => {
       const [mode, relPath] = staged.split(":");
 
-      const absPath = path.resolve(myGitParentDir, relPath);
+      const absPath = path.resolve(zeetParentDir, relPath);
       const relToCurrDir = path.relative(process.cwd(), absPath);
 
       switch (mode) {
@@ -138,7 +138,7 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
     unstagedChanges.forEach((unstaged) => {
       const [mode, relPath] = unstaged.split(":");
 
-      const absPath = path.resolve(myGitParentDir, relPath);
+      const absPath = path.resolve(zeetParentDir, relPath);
       const relToCurrDir = path.relative(process.cwd(), absPath);
 
       switch (mode) {
@@ -164,14 +164,14 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
 
     if (changedOutput.length) {
       console.log(
-        `Changes not staged:\n${customTab}(Use 'mygit add <files>...' to stage them)`
+        `Changes not staged:\n${customTab}(Use 'zeet add <files>...' to stage them)`
       );
       console.log(styleText("red", changedOutput));
     }
 
     if (untrackedOutput.length) {
       console.log(
-        `Untracked Files:\n${customTab}(Use 'mygit add <files>...' to include them in next commit)`
+        `Untracked Files:\n${customTab}(Use 'zeet add <files>...' to include them in next commit)`
       );
       console.log(styleText("red", untrackedOutput));
     }

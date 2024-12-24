@@ -30,20 +30,20 @@ import { diff } from "./providers/diff";
 import { status } from "./providers/status";
 
 function confirmRepo(argv: ArgumentsCamelCase) {
-  const myGitParentDir = resolveRoot.find();
+  const zeetParentDir = resolveRoot.find();
 
-  const dirExists = fs.existsSync(path.resolve(myGitParentDir, MYGIT_DIRNAME));
+  const dirExists = fs.existsSync(path.resolve(zeetParentDir, MYGIT_DIRNAME));
   const STAGINGExists = fs.existsSync(
-    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING)
+    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING)
   );
   const HEADExists = fs.existsSync(
-    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD)
+    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_HEAD)
   );
   const REPOExists = fs.existsSync(
-    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO)
+    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO)
   );
   const BRANCHExists = fs.existsSync(
-    path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH)
+    path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH)
   );
 
   const skippedCommands = ["init"];
@@ -72,37 +72,37 @@ yargs(hideBin(process.argv))
       `
 ╔══════════════════════════════════════════════════════╗
 ║  🌟 Welcome! Please specify a valid command.         ║
-║  Run 'mygit --help' for usage info.                  ║
+║  Run 'zeet --help' for usage info.                  ║
 ╚══════════════════════════════════════════════════════╝
   `.trim()
     );
   })
   .command(
     "init",
-    "Initialize mygit repository",
+    "Initialize zeet repository",
     (yargs) => {},
     async (argv) => {
-      const myGitDirPath = path.resolve(MYGIT_DIRNAME);
+      const zeetDirPath = path.resolve(MYGIT_DIRNAME);
       try {
         // Check if directory already exists
-        let dirExists: boolean = fs.existsSync(myGitDirPath);
+        let dirExists: boolean = fs.existsSync(zeetDirPath);
         if (dirExists) {
           console.warn(
-            `Already initialized MyGit repository in ${myGitDirPath}`
+            `Already initialized MyGit repository in ${zeetDirPath}`
           );
           process.exit(1);
         }
 
-        // 1. Create `.mygit` directory
-        fs.mkdirSync(myGitDirPath, { recursive: true });
+        // 1. Create `.zeet` directory
+        fs.mkdirSync(zeetDirPath, { recursive: true });
         // 2. Create REPO dir
-        const repoPath = path.resolve(myGitDirPath, MYGIT_REPO);
+        const repoPath = path.resolve(zeetDirPath, MYGIT_REPO);
         fs.mkdirSync(repoPath);
 
         // 3.  Create BRANCH dir & Create Default BRANCH dir
         const defaultBranchName = randomUUID();
         const defBranchPath = path.resolve(
-          myGitDirPath,
+          zeetDirPath,
           MYGIT_BRANCH,
           defaultBranchName
         );
@@ -118,7 +118,7 @@ yargs(hideBin(process.argv))
         // 5. Create ACTIVE file to track active branch. Default content is written to `defaultBranchName`
         // Meaning it will be the default active branch
         const activeBranchFile = path.resolve(
-          myGitDirPath,
+          zeetDirPath,
           MYGIT_BRANCH,
           MYGIT_ACTIVE_BRANCH
         );
@@ -127,7 +127,7 @@ yargs(hideBin(process.argv))
         });
         // 6. Create branch MAPPER.json
         const mapperFile = path.resolve(
-          myGitDirPath,
+          zeetDirPath,
           MYGIT_BRANCH,
           `${MYGIT_BRANCH_MAPPER}.json`
         );
@@ -136,11 +136,11 @@ yargs(hideBin(process.argv))
           encoding: "utf-8",
         });
 
-        // 7. Create staging file inside `.mygit` directory
-        const stgFile = path.resolve(myGitDirPath, MYGIT_STAGING);
+        // 7. Create staging file inside `.zeet` directory
+        const stgFile = path.resolve(zeetDirPath, MYGIT_STAGING);
         fs.writeFileSync(stgFile, "", { encoding: "utf-8" });
-        // 8. Create Head file inside `.mygit` directory
-        const headFile = path.resolve(myGitDirPath, MYGIT_HEAD);
+        // 8. Create Head file inside `.zeet` directory
+        const headFile = path.resolve(zeetDirPath, MYGIT_HEAD);
         fs.writeFileSync(headFile, "", { encoding: "utf-8" });
 
         // await Promise.all(initializationArr);
@@ -164,7 +164,7 @@ yargs(hideBin(process.argv))
       });
     },
     async (argv) => {
-      const myGitParentDir = resolveRoot.find();
+      const zeetParentDir = resolveRoot.find();
       const files = argv.files;
 
       if (Array.isArray(files)) {
@@ -178,7 +178,7 @@ yargs(hideBin(process.argv))
         let stgFiles: string[] = [];
         // If is a dot(`.`), add current directory to staging(modified and untracked files only)
         if (files.includes(".")) {
-          const wdFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.mygitignore` or `.gitignore`
+          const wdFilePaths = await getFilePathsUnderDir(); // Will ignore patterns in `.zeetignore` or `.gitignore`
 
           // Filter out file paths that did not change
           const indexableFilePaths = await Promise.all(
@@ -217,14 +217,14 @@ yargs(hideBin(process.argv))
               let fileToStage = path.isAbsolute(filePath)
                 ? filePath
                 : path.join(process.cwd(), filePath); // will correctly handle paths like '../../file'
-              if (!fileToStage.includes(myGitParentDir)) {
+              if (!fileToStage.includes(zeetParentDir)) {
                 console.error(
-                  `IKO SHIDA! Path: '${fileToStage}' is outside repository at '${myGitParentDir}'`
+                  `IKO SHIDA! Path: '${fileToStage}' is outside repository at '${zeetParentDir}'`
                 );
                 process.exit(1);
               }
               // Convert path to relative
-              filePath = path.relative(myGitParentDir, filePath);
+              filePath = path.relative(zeetParentDir, filePath);
 
               let shouldStage = "";
               try {
@@ -268,7 +268,7 @@ yargs(hideBin(process.argv))
               // Check if file exists; but skip check for 'D' marked file paths
               if (file[0] !== "D")
                 await fs.promises.access(
-                  path.resolve(myGitParentDir, file[1]),
+                  path.resolve(zeetParentDir, file[1]),
                   fs.constants.F_OK
                 );
 
@@ -284,10 +284,10 @@ yargs(hideBin(process.argv))
           })
         );
 
-        // Write existent files to staging file(inside `.mygit`)
+        // Write existent files to staging file(inside `.zeet`)
         try {
           const stgIndexPath = path.resolve(
-            myGitParentDir,
+            zeetParentDir,
             MYGIT_DIRNAME,
             MYGIT_STAGING
           );
@@ -312,7 +312,7 @@ yargs(hideBin(process.argv))
           // 1. Remove dups
           const dedupedStgContent = [...new Set(stgContentArr)];
           // 2. Confirm the files paths are indexable
-          // Solves case where a file is 'untracked/modified' in previous `mygit add ...`, and now it is undone(in current mygit add ...)
+          // Solves case where a file is 'untracked/modified' in previous `zeet add ...`, and now it is undone(in current zeet add ...)
           const confirmedIndexables = await Promise.all(
             dedupedStgContent.map(async function (filePath) {
               const file = filePath.split(":");
@@ -377,13 +377,13 @@ yargs(hideBin(process.argv))
         });
     },
     async (argv) => {
-      const myGitParentDir = resolveRoot.find();
+      const zeetParentDir = resolveRoot.find();
       const { message } = argv;
 
-      // Read all paths in `.mygit/STAGING`(staged files)
+      // Read all paths in `.zeet/STAGING`(staged files)
       try {
         const stagedPaths = fs.readFileSync(
-          path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
+          path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_STAGING),
           "utf-8"
         );
         const dedupedPaths = [...new Set(stagedPaths.split(/\r?\n/))].filter(
@@ -391,7 +391,7 @@ yargs(hideBin(process.argv))
         );
         if (!dedupedPaths.length) {
           console.log(
-            "Nothing to commit.\nAdd files that will be committed. See 'mygit add --help'"
+            "Nothing to commit.\nAdd files that will be committed. See 'zeet add --help'"
           );
           process.exit(1);
         }
@@ -414,7 +414,7 @@ yargs(hideBin(process.argv))
             );
           } else {
             stats = await fs.promises.stat(
-              path.resolve(myGitParentDir, wdFilePath)
+              path.resolve(zeetParentDir, wdFilePath)
             );
           }
 
@@ -425,7 +425,7 @@ yargs(hideBin(process.argv))
               await fs.promises.rm(newSnapshotPath, { recursive: true });
             } else {
               copyDir({
-                src: path.resolve(myGitParentDir, wdFilePath),
+                src: path.resolve(zeetParentDir, wdFilePath),
                 dest: newSnapshotPath,
                 ignore: true,
               });
@@ -440,7 +440,7 @@ yargs(hideBin(process.argv))
               const dirPath = path.dirname(wdFilePath);
 
               const wdFilePathContents = await fs.promises.readFile(
-                path.resolve(myGitParentDir, wdFilePath),
+                path.resolve(zeetParentDir, wdFilePath),
                 "utf-8"
               );
 
@@ -492,18 +492,18 @@ yargs(hideBin(process.argv))
     },
     async (argv) => {
       const { branchName, list, delete: deletion } = argv;
-      const myGitParentDir = resolveRoot.find();
+      const zeetParentDir = resolveRoot.find();
 
       const nowSnapshotFullPath = await workDirVersionInrepo();
       const nowSnapshotTkn = nowSnapshotFullPath
         ? path.relative(
-            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_REPO),
+            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_REPO),
             nowSnapshotFullPath
           )
         : "";
       const checkedOutBranch = await fs.promises.readFile(
         path.resolve(
-          myGitParentDir,
+          zeetParentDir,
           MYGIT_DIRNAME,
           MYGIT_BRANCH,
           MYGIT_ACTIVE_BRANCH
@@ -511,7 +511,7 @@ yargs(hideBin(process.argv))
         "utf-8"
       );
       const branchMapsFilePath = path.resolve(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         `${MYGIT_BRANCH_MAPPER}.json`
@@ -528,8 +528,8 @@ yargs(hideBin(process.argv))
 
         const branchToCreate = branchName.trim();
         try {
-          const myGitBranchDir = path.resolve(
-            myGitParentDir,
+          const zeetBranchDir = path.resolve(
+            zeetParentDir,
             MYGIT_DIRNAME,
             MYGIT_BRANCH
           );
@@ -548,7 +548,7 @@ yargs(hideBin(process.argv))
           })();
           if (branchExists) {
             console.error(
-              `The branch: ${branchToCreate}, already exists!.\nSwitch to it with 'mygit switch ${branchToCreate}'`
+              `The branch: ${branchToCreate}, already exists!.\nSwitch to it with 'zeet switch ${branchToCreate}'`
             );
             process.exit(1);
           }
@@ -562,11 +562,11 @@ yargs(hideBin(process.argv))
             JSON.stringify(branchMappings),
             { encoding: "utf-8" }
           );
-          // Make new `<genBranchName>` Dir in `<myGitBranchDir>`
-          await fs.promises.mkdir(path.resolve(myGitBranchDir, genBranchName));
+          // Make new `<genBranchName>` Dir in `<zeetBranchDir>`
+          await fs.promises.mkdir(path.resolve(zeetBranchDir, genBranchName));
           // Make branch's ACTIVITY file with pointer to current snapshot
           await fs.promises.writeFile(
-            path.resolve(myGitBranchDir, genBranchName, MYGIT_BRANCH_ACTIVITY),
+            path.resolve(zeetBranchDir, genBranchName, MYGIT_BRANCH_ACTIVITY),
             nowSnapshotTkn,
             { encoding: "utf-8" }
           );
@@ -609,7 +609,7 @@ yargs(hideBin(process.argv))
 
           // 2. Find branch by the name specified
           const branchDirContents = await fs.promises.readdir(
-            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
             {
               withFileTypes: true,
             }
@@ -619,7 +619,7 @@ yargs(hideBin(process.argv))
             .filter((item) => item.isDirectory())
             .map((dirEnt) =>
               path.join(
-                path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+                path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
                 dirEnt.name
               )
             )
@@ -627,7 +627,7 @@ yargs(hideBin(process.argv))
 
           if (!markedBranchPath) {
             console.error(
-              "Branch does not exist! See a list with 'mygit branch --list'."
+              "Branch does not exist! See a list with 'zeet branch --list'."
             );
             process.exit(1);
           }
@@ -651,7 +651,7 @@ yargs(hideBin(process.argv))
           const branchMappingsObj = Object.fromEntries(branchMappings);
 
           const branchDirContents = await fs.promises.readdir(
-            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
+            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_BRANCH),
             {
               withFileTypes: true,
             }
@@ -697,11 +697,11 @@ yargs(hideBin(process.argv))
         });
     },
     async (argv) => {
-      const myGitParentDir = resolveRoot.find();
+      const zeetParentDir = resolveRoot.find();
       const { branchName } = argv;
       const switchToBranch = branchName!.trim();
       const branchMapsFilePath = path.resolve(
-        myGitParentDir,
+        zeetParentDir,
         MYGIT_DIRNAME,
         MYGIT_BRANCH,
         `${MYGIT_BRANCH_MAPPER}.json`
@@ -710,7 +710,7 @@ yargs(hideBin(process.argv))
       try {
         // If files are indexed in staging, reset the index
         const stgIndexPath = path.resolve(
-          myGitParentDir,
+          zeetParentDir,
           MYGIT_DIRNAME,
           MYGIT_STAGING
         );
@@ -738,13 +738,13 @@ yargs(hideBin(process.argv))
 
         if (!sysNamedBranch) {
           console.error(
-            "Branch does not exist! See a list with 'mygit branch --list'."
+            "Branch does not exist! See a list with 'zeet branch --list'."
           );
           process.exit(1);
         }
 
         const checkedOutBranchPath = path.resolve(
-          myGitParentDir,
+          zeetParentDir,
           MYGIT_DIRNAME,
           MYGIT_BRANCH,
           MYGIT_ACTIVE_BRANCH
@@ -759,7 +759,7 @@ yargs(hideBin(process.argv))
         }
 
         const branchDirPath = path.resolve(
-          myGitParentDir,
+          zeetParentDir,
           MYGIT_DIRNAME,
           MYGIT_BRANCH
         );
@@ -782,7 +782,7 @@ yargs(hideBin(process.argv))
 
         if (branchLatestSnapshot) {
           await fs.promises.writeFile(
-            path.resolve(myGitParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
+            path.resolve(zeetParentDir, MYGIT_DIRNAME, MYGIT_HEAD),
             `${sysNamedBranch}@${branchLatestSnapshot}`,
             { encoding: "utf-8" }
           );
@@ -790,7 +790,7 @@ yargs(hideBin(process.argv))
           // 3. Pick POINTER from branch's ACTIVITY
           // 4. Reset work dir with contents of pointer
           const snapshotStorePath = path.resolve(
-            myGitParentDir,
+            zeetParentDir,
             MYGIT_DIRNAME,
             MYGIT_REPO,
             branchLatestSnapshot.split("&")[0],
@@ -799,7 +799,7 @@ yargs(hideBin(process.argv))
 
           await synchronizeDestWithSrc({
             src: snapshotStorePath,
-            dest: myGitParentDir,
+            dest: zeetParentDir,
           });
         }
 
