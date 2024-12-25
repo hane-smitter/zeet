@@ -60,7 +60,7 @@ function confirmRepo(argv: ArgumentsCamelCase) {
     !HEADExists ||
     !BRANCHExists
   ) {
-    console.error("IKO SHIDA! Not a MyGit repository");
+    console.error("IKO SHIDA! Not a Zeet repository");
     process.exit(1);
   }
 }
@@ -88,7 +88,7 @@ yargs(hideBin(process.argv))
         let dirExists: boolean = fs.existsSync(zeetDirPath);
         if (dirExists) {
           console.warn(
-            `Already initialized MyGit repository in ${zeetDirPath}`
+            `Already initialized Zeet repository in ${zeetDirPath}`
           );
           process.exit(1);
         }
@@ -148,7 +148,7 @@ yargs(hideBin(process.argv))
         //   await asyncInit;
         // }
 
-        console.log("Initialized MyGit repository");
+        console.log("Initialized Zeet repository");
       } catch (error) {
         console.error(`Error initializing ${ZEET_DIRNAME} directory: `, error);
       }
