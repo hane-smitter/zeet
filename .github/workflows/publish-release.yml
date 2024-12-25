@@ -1,0 +1,37 @@
+name: Publish to NPM
+on:
+  # this will trigger when we create a release
+  release:
+    types: [created]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Only release from stem branch
+      - name: Check if is production branch
+        if: ${{ github.event_name == 'release' && github.event.release.target_commitish != 'stem'}}
+        run: exit 128
+
+      # Get the source code from stem branch
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: stem
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies 📥
+        run: npm ci
+
+      - name: Build & Test package 🔧
+        run: npm run build && npm run test
+
+      # The package will be built and tested automatically before a publish
+      - name: Publish package to NPM 📦
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

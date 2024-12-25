@@ -1,0 +1,65 @@
+# Create a new GitHub release when tags are pushed to the repository
+name: "Create Tagged Release"
+
+on:
+  workflow_run:
+    workflows: [Publish to NPM]
+    types:
+      - completed
+    branches: [stem]
+
+jobs:
+  tagged-release:
+    name: "Create Tagged Release"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      # Step 1: Halt if the dependent workflow failed
+      - name: Halt if dependent workflow failed
+        if: ${{ github.event.workflow_run.conclusion != 'success' }}
+        run: |
+          echo "Dependent workflow failed. Exiting..."
+          exit 128
+
+      # Step 2: Check out the code at the correct tag
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Ensures all tags are fetched
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      # Step 3: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+
+      # Step 4: Install Dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # Step 5: Build and Test
+      - name: Build & Test
+        run: npm run build && npm run test
+
+      # Step 6: Generate Release Notes
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          echo "## What's Changed" > release-notes.md
+          echo >> release-notes.md
+          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s ([#%h](https://github.com/${{ github.repository }}/commit/%H)) by @%an" >> release-notes.md
+          echo >> release-notes.md
+
+      # Step 7: Create GitHub Release
+      - name: Create Release
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: ${{ github.event.workflow_run.head_branch }}
+          prerelease: false
+          title: Release ${{ github.event.workflow_run.head_branch }}
+          files: |
+            LICENSE
+            *.md
+          # body_path: release-notes.md
