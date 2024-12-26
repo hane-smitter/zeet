@@ -176,4 +176,9 @@ export const status = async (argv: ArgumentsCamelCase<{}>) => {
       console.log(styleText("red", untrackedOutput));
     }
   }
+
+  // 6.4 Log output when there is nothing to commit
+  if (!stagedChanges.length && !unstagedChanges.length) {
+    console.log("Nothing changed. Working directory clean.");
+  }
 };

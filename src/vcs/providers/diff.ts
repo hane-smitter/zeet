@@ -170,8 +170,13 @@ export const diff = async (
     } else {
       const versionStore2 = zeetParentDir;
 
-      for (let idx = 0; idx < versionStoreFiles1.length; idx++) {
-        const filePath = versionStoreFiles1[idx];
+      const mergedFileSources = await getFilePathsUnderDir(
+        undefined,
+        versionStore2
+      ).then((files) => [...new Set([...versionStoreFiles1, ...files])]);
+
+      for (let idx = 0; idx < mergedFileSources.length; idx++) {
+        const filePath = mergedFileSources[idx];
 
         const modelledPatch = await generateDiff({
           oldFilePath: path.join(versionStore1, filePath),

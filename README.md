@@ -110,7 +110,7 @@ Once the project is linked globally, you can use it directly from the command li
   This displays the commit history, showing commit hashes, messages, and timestamps.
 
   <figure>
-    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-commit-hist3.jpg" alt="commit history log from CLI too called zeet" />
+    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-log-out.jpg" alt="commit history log from CLI too called zeet" />
     <figcaption>Sample output of <code>zeet log</code></figcaption>
   </figure>
 
@@ -148,7 +148,7 @@ Once the project is linked globally, you can use it directly from the command li
   This shows the differences between working directory and the commit. In place of `<commit-hash>`, you can also specify branch or path to a file under repository.
 
   <figure>
-    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-diff-out2.jpg" alt="Diff between commits" />
+    <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-diff-out.jpg" alt="Diff between commits" />
     <figcaption>Sample output of <code>zeet diff</code></figcaption>
   </figure>
 
@@ -170,7 +170,7 @@ Once the project is linked globally, you can use it directly from the command li
 
 - **Ignore files**:
   Create a `.zeetignore` file in your repository root and list the files to be ignored.  
-  It accepts the same patterns as `git`.
+  It accepts the same patterns as with `.gitignore`.
 
 <!-- - **Clone a repository**:
   ```bash
