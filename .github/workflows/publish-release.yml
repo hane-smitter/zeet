@@ -26,9 +26,11 @@ jobs:
 
       - name: Test npm login
         run: |
+          echo "NPM Auth token: $NPM_AUTH_TOKEN"
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ~/.npmrc
-          cat ~/.npmrc
           npm whoami
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
       - name: Install dependencies 📥
         run: npm ci
