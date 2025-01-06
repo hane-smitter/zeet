@@ -22,22 +22,42 @@ The project doesn't yet include advanced features like rebasing or conflict reso
 
 ## Software requirements
 
-`Zeet` is **platform-agnostic** because it leverages Node.js, allowing it to run on any system with Node.js installed.
+`Zeet` is **platform-agnostic** because it leverages Node.js, allowing it to run on any system with Node.js installed. 
 You need to ensure you have [_node.js_](https://nodejs.org/en/download/package-manager) installed on your computer. The recommended version is at least version **>=20**.
 
 ## Installation
 
-Install globally on your computer:
+1. **Clone the repository**:
 
-```bash
-npm install -g zeet
-```
+   ```bash
+   git clone https://github.com/hane-smitter/zeet.git
+   cd zeet
+   ```
 
-This will allow you to use the `zeet` command in any repository.
+2. **Install dependencies**:
+
+   ```bash
+   npm install
+   ```
+
+3. **Build CLI tool**:
+
+   ```bash
+   npm run build
+   ```
+
+4. **Link the CLI tool globally**:
+   After cloning the project and building, use the `npm link` command to make the tool available globally on your machine.
+
+   ```bash
+   npm link
+   ```
+
+   This will allow you to use the `zeet` command in any repository.
 
 ## Usage
 
-Once installed, you can use it directly from the command line. Here are some example commands:
+Once the project is linked globally, you can use it directly from the command line. Here are some example commands:
 
 - **Initialize a repository**:
 
@@ -157,8 +177,6 @@ Once installed, you can use it directly from the command line. Here are some exa
   zeet clone <source-directory> <destination-directory>
   ```
   This clones the repository from the source directory to the destination directory. -->
-
-> **Note:** To view more helpful information about a command, you can use `zeet <command-name> --help`
 
 ## Contribution
 

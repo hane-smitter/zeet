@@ -834,7 +834,7 @@ yargs(hideBin(process.argv))
   )
   .command(
     "status",
-    "Show file paths that have changes in the working directory when compared with current HEAD commit",
+    "Show working tree status",
     (yargs) => {},
     status
   )

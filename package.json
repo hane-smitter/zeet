@@ -1,6 +1,6 @@
 {
   "name": "zeet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Git-like Version Control System",
   "main": "dist/main.js",
   "scripts": {
