@@ -25,7 +25,10 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Test npm login
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ~/.npmrc && npm whoami
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ~/.npmrc
+          cat ~/.npmrc
+          npm whoami
 
       - name: Install dependencies 📥
         run: npm ci
