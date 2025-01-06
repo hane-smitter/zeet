@@ -26,11 +26,10 @@ jobs:
 
       - name: Test npm login
         run: |
-          pwd
           echo "NPM Auth token: $NPM_AUTH_TOKEN"
-          cat .github/workflows/publish-release.yml
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ~/.npmrc
-          npm whoami
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ./.npmrc
+          cat ./.npmrc
+          npm whoami --loglevel verbose
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
