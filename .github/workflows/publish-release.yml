@@ -1,4 +1,5 @@
 name: PUBLISH
+
 on:
   # this will trigger when we create a release
   release:

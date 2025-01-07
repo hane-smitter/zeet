@@ -6,7 +6,7 @@ on:
     workflows: [PUBLISH] # Ensure this matches the name in publish-release.yml
     types:
       - completed
-    branches: [stem]
+    # branches: [stem]
 
 jobs:
   tagged-release:
