@@ -60,14 +60,35 @@ jobs:
           echo >> release-notes.md
 
       # Step 7: Create GitHub Release
-      - name: Create Release
-        uses: marvinpinto/action-automatic-releases@latest
+      # - name: Create Release
+      #   uses: marvinpinto/action-automatic-releases@latest
+      #   with:
+      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #     automatic_release_tag: ${{ github.event.workflow_run.head_branch }}
+      #     prerelease: false
+      #     title: Release ${{ github.event.workflow_run.head_branch }}
+      #     files: |
+      #       LICENSE
+      #       *.md
+
+      # Step 7: Upload Release Notes and Artifacts
+      - name: Upload Release Notes
+        uses: actions/upload-artifact@v3
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: ${{ github.event.workflow_run.head_branch }}
-          prerelease: false
-          title: Release ${{ github.event.workflow_run.head_branch }}
-          files: |
-            LICENSE
-            *.md
-          # body_path: release-notes.md
+          name: release-notes-${{ github.event.workflow_run.head_branch }}
+          path: |
+            release-notes.md
+            release-notes.txt
+
+      # Step 8: Update Existing Release with Release Notes
+      - name: Update Existing Release
+        run: |
+          echo "Checking if release for tag '${{ github.event.workflow_run.head_branch }}' exists..."
+          if gh release view ${{ github.event.workflow_run.head_branch }} > /dev/null 2>&1; then
+            echo "Release found. Updating release notes..."
+            gh release edit ${{ github.event.workflow_run.head_branch }} --notes-file release-notes.md
+          else
+            echo "No release found for tag '${{ github.event.workflow_run.head_branch }}'. Skipping update."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
