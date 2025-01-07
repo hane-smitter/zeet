@@ -1,4 +1,4 @@
-name: "Publish to NPM"
+name: PUBLISH
 on:
   # this will trigger when we create a release
   release:
@@ -11,8 +11,8 @@ jobs:
       - name: Log event details
         run: |
           echo "Event name: ${{ github.event_name }}"
-          echo "Event name: ${{ github.event.release.target_commitish }}"
-          echo "Conclusion: ${{ github.event.release.tag_name }}"
+          echo "Event on branch: ${{ github.event.release.target_commitish }}"
+          echo "Tag name: ${{ github.event.release.tag_name }}"
 
       # Only release from stem branch
       - name: Check if is production branch

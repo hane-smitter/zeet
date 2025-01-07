@@ -1,16 +1,16 @@
 # Create a new GitHub release when tags are pushed to the repository
-name: "Create Tagged Release"
+name: Create Release Artifacts
 
 on:
   workflow_run:
-    workflows: ["Publish to NPM"] # Ensure this matches the name in publish-release.yml
+    workflows: [PUBLISH] # Ensure this matches the name in publish-release.yml
     types:
       - completed
-    branches: ["stem"]
+    branches: [stem]
 
 jobs:
   tagged-release:
-    name: "Create Tagged Release"
+    name: "Collect Release Artifacts"
     runs-on: "ubuntu-latest"
 
     steps:
@@ -71,8 +71,3 @@ jobs:
             LICENSE
             *.md
           # body_path: release-notes.md
-
-      # Debugging step2: Log event conclusion
-      - name: Debug Log for event conclusion
-        run: |
-          echo "Conclusion at end of steps: ${{ github.event.workflow_run.conclusion }}"
