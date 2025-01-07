@@ -1,4 +1,4 @@
-name: Publish to NPM
+name: "Publish to NPM"
 on:
   # this will trigger when we create a release
   release:
@@ -29,8 +29,6 @@ jobs:
           echo "NPM Auth token: $NPM_AUTH_TOKEN"
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ./.npmrc
           npm whoami
-        # env:
-        #   NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
       - name: Install dependencies 📥
         run: npm ci

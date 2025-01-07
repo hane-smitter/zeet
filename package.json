@@ -1,6 +1,6 @@
 {
   "name": "zeet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Git-like Version Control System",
   "main": "dist/main.js",
   "scripts": {
@@ -11,6 +11,14 @@
     "postbuild": "chmod -R 755 dist/vcs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "vcs",
+    "git",
+    "cli",
+    "terminal",
+    "cmd",
+    "svn"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hane-smitter/zeet.git"

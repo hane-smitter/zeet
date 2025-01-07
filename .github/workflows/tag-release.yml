@@ -3,7 +3,7 @@ name: "Create Tagged Release"
 
 on:
   workflow_run:
-    workflows: [Publish to NPM]
+    workflows: ["Publish to NPM"]  # Ensure this matches the name in publish-release.yml
     types:
       - completed
     branches: [stem]
