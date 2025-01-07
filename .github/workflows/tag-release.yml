@@ -3,10 +3,10 @@ name: "Create Tagged Release"
 
 on:
   workflow_run:
-    workflows: ["Publish to NPM"]  # Ensure this matches the name in publish-release.yml
+    workflows: ["Publish to NPM"] # Ensure this matches the name in publish-release.yml
     types:
       - completed
-    branches: [stem]
+    branches: ["stem"]
 
 jobs:
   tagged-release:
@@ -14,6 +14,14 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
+      # Debugging step: Log event details
+      - name: Log event details
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Workflow name: ${{ github.event.workflow_run.name }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+
       # Step 1: Halt if the dependent workflow failed
       - name: Halt if dependent workflow failed
         if: ${{ github.event.workflow_run.conclusion != 'success' }}
@@ -63,3 +71,8 @@ jobs:
             LICENSE
             *.md
           # body_path: release-notes.md
+
+      # Debugging step2: Log event conclusion
+      - name: Debug Log for event conclusion
+        run: |
+          echo "Conclusion at end of steps: ${{ github.event.workflow_run.conclusion }}"

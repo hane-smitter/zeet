@@ -7,6 +7,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Debugging step: Log event details
+      - name: Log event details
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Event name: ${{ github.event.release.target_commitish }}"
+          echo "Conclusion: ${{ github.event.release.tag_name }}"
+
       # Only release from stem branch
       - name: Check if is production branch
         if: ${{ github.event_name == 'release' && github.event.release.target_commitish != 'stem'}}

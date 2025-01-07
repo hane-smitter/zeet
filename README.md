@@ -70,6 +70,7 @@ Once installed, you can use it directly from the command line. Here are some exa
 
   <figure>
     <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-status-out.jpg" alt="status of changed files" />
+    <br />
     <figcaption>Sample output of <code>zeet status</code></figcaption>
   </figure>
 
@@ -91,6 +92,7 @@ Once installed, you can use it directly from the command line. Here are some exa
 
   <figure>
     <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-log-out.jpg" alt="commit history log from CLI too called zeet" />
+    <br />
     <figcaption>Sample output of <code>zeet log</code></figcaption>
   </figure>
 
@@ -129,6 +131,7 @@ Once installed, you can use it directly from the command line. Here are some exa
 
   <figure>
     <img src="https://raw.githubusercontent.com/hane-smitter/zeet/refs/heads/assets/zeet-diff-out.jpg" alt="Diff between commits" />
+    <br />
     <figcaption>Sample output of <code>zeet diff</code></figcaption>
   </figure>
 
