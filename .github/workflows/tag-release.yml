@@ -8,6 +8,9 @@ on:
       - completed
     # branches: [stem] # Commented out because `github.event.workflow_run.head_branch` picks latest tag(v*.*.*) as HEAD branch
 
+permissions:
+  contents: write
+
 jobs:
   tagged-release:
     name: "Collect Release Artifacts"
