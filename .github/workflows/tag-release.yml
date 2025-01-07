@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "## What's Changed" > release-notes.md
           echo >> release-notes.md
-          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s ([#%h](https://github.com/${{ github.repository }}/commit/%H)) by [**%an](https://github.com/${{ github.repository_owner }})**" >> release-notes.md
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s ([#%h](https://github.com/${{ github.repository }}/commit/%H)) by @%an" >> release-notes.md
           echo >> release-notes.md
 
       # Step 7: Create GitHub Release
